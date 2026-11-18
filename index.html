@@ -1,0 +1,3421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5.0">
+<meta name="theme-color" content="#04070d">
+<meta name="description" content="单文件二维空气动力学演示：空速、迎角、前缘缝翼、后缘襟翼、扰流板五通道独立控制，以及 16 秒自动飞行剖面。">
+<title>终极飞行 · 空气动力学演示</title>
+<style>
+  :root{
+    --bg:#04070d;
+    --bg-2:#07111b;
+    --panel:rgba(7,15,25,.94);
+    --panel-2:rgba(10,21,34,.78);
+    --line:rgba(150,210,255,.13);
+    --line-2:rgba(150,210,255,.24);
+    --text:#eaf7ff;
+    --muted:#7f96ac;
+    --muted-2:#5d7488;
+    --cyan:#55e2ff;
+    --teal:#35e0c2;
+    --blue:#6ea8ff;
+    --amber:#ffb84d;
+    --red:#ff6b7a;
+    --green:#43e6a5;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+    --shadow:0 24px 70px rgba(0,0,0,.36);
+    --radius:22px;
+  }
+
+  *{box-sizing:border-box}
+  html{background:var(--bg);scroll-behavior:smooth}
+  body{
+    margin:0;
+    min-height:100vh;
+    color:var(--text);
+    font-family:var(--sans);
+    background:
+      radial-gradient(1100px 700px at 18% -10%,rgba(26,109,145,.20),transparent 62%),
+      radial-gradient(900px 600px at 100% 8%,rgba(77,69,180,.15),transparent 60%),
+      linear-gradient(180deg,#04070d 0%,#050b13 55%,#04070d 100%);
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    overflow-x:hidden;
+  }
+  body::before{
+    content:"";
+    position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:
+      linear-gradient(rgba(138,205,255,.026) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(138,205,255,.026) 1px,transparent 1px);
+    background-size:64px 64px;
+    mask-image:linear-gradient(to bottom,rgba(0,0,0,.7),transparent 78%);
+    -webkit-mask-image:linear-gradient(to bottom,rgba(0,0,0,.7),transparent 78%);
+  }
+  button,input{font:inherit}
+  button{color:inherit}
+  .page{
+    position:relative;z-index:1;
+    width:100%;
+    max-width:1500px;
+    margin:0 auto;
+    padding:24px clamp(12px,3vw,34px) 34px;
+  }
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+    margin-bottom:18px;
+  }
+  .brand{display:flex;align-items:center;gap:12px;min-width:0}
+  .brand-mark{
+    width:42px;height:42px;border-radius:14px;flex:0 0 auto;
+    display:grid;place-items:center;
+    background:linear-gradient(145deg,rgba(85,226,255,.18),rgba(110,168,255,.06));
+    border:1px solid rgba(85,226,255,.28);
+    color:var(--cyan);
+    font-size:19px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 0 28px rgba(85,226,255,.12);
+  }
+  .brand-copy{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .brand-copy b{
+    font-family:var(--mono);font-size:12px;letter-spacing:.17em;
+    color:#dff6ff;white-space:nowrap;
+  }
+  .brand-copy small{
+    font-family:var(--mono);font-size:9px;letter-spacing:.15em;color:var(--muted-2);
+    white-space:nowrap;
+  }
+  .top-chips{display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+  .chip{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:7px 10px;border-radius:999px;
+    border:1px solid var(--line);background:rgba(9,19,31,.7);
+    color:var(--muted);font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;
+    white-space:nowrap;
+  }
+  .chip.live{color:var(--teal);border-color:rgba(53,224,194,.28);background:rgba(53,224,194,.07)}
+  .chip.live i{width:5px;height:5px;border-radius:50%;background:var(--teal);box-shadow:0 0 10px var(--teal);animation:pulse 2.2s infinite}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.8)}}
+
+  .hero{
+    display:flex;align-items:flex-end;justify-content:space-between;gap:20px;
+    margin:0 0 18px;
+  }
+  .hero h1{
+    margin:0;
+    font-size:clamp(29px,4.7vw,54px);
+    line-height:1.02;
+    letter-spacing:-.035em;
+    font-weight:800;
+    background:linear-gradient(100deg,#f3fdff 0%,#a9efff 42%,#5ee7ff 72%,#54bfff 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 0 42px rgba(85,226,255,.14);
+  }
+  .hero p{
+    margin:9px 0 0;max-width:760px;
+    color:var(--muted);font-size:clamp(12px,1.5vw,14px);line-height:1.65;
+  }
+  .hero-meta{
+    display:flex;flex-direction:column;align-items:flex-end;gap:4px;
+    font-family:var(--mono);font-size:9.5px;color:var(--muted-2);
+    letter-spacing:.12em;white-space:nowrap;padding-bottom:4px;
+  }
+  .hero-meta b{color:var(--cyan);font-weight:500}
+
+  /* ---------- layout ---------- */
+  .layout{
+    display:grid;
+    grid-template-columns:minmax(0,1.62fr) minmax(340px,.92fr);
+    gap:18px;
+    align-items:start;
+  }
+  .stage-card{
+    min-width:0;
+    padding:8px;
+    border-radius:calc(var(--radius) + 4px);
+    border:1px solid var(--line);
+    background:linear-gradient(150deg,rgba(10,22,35,.9),rgba(4,9,15,.92));
+    box-shadow:var(--shadow);
+    position:relative;
+    overflow:hidden;
+  }
+  .stage-card::before{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(140deg,rgba(85,226,255,.06),transparent 32%,transparent 68%,rgba(255,184,77,.04));
+  }
+  .stage{
+    position:relative;
+    width:100%;
+    aspect-ratio:1.38;
+    min-height:360px;
+    border-radius:var(--radius);
+    overflow:hidden;
+    background:#06111a;
+    isolation:isolate;
+    touch-action:pan-y;
+  }
+  #flowCanvas{display:block;width:100%;height:100%}
+  .stage::after{
+    content:"";position:absolute;inset:0;pointer-events:none;z-index:2;
+    background:
+      linear-gradient(180deg,rgba(3,9,15,.28),transparent 24%,transparent 72%,rgba(3,9,15,.56)),
+      radial-gradient(90% 70% at 50% 45%,transparent 52%,rgba(2,6,11,.34) 100%);
+    border-radius:inherit;
+    box-shadow:inset 0 0 0 1px rgba(129,205,255,.09);
+  }
+  .hud{position:absolute;z-index:5;pointer-events:none}
+  .hud-phase{
+    left:16px;top:15px;
+    display:flex;align-items:center;gap:10px;
+    padding:9px 12px 9px 10px;
+    border-radius:14px;
+    border:1px solid rgba(120,200,255,.16);
+    background:rgba(5,13,21,.72);
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    box-shadow:0 8px 24px rgba(0,0,0,.2);
+    max-width:calc(100% - 150px);
+  }
+  .hud-phase .phase-icon{
+    width:31px;height:31px;border-radius:10px;display:grid;place-items:center;
+    background:rgba(85,226,255,.09);border:1px solid rgba(85,226,255,.18);
+    font-size:16px;line-height:1;
+  }
+  .hud-phase b{display:block;font-size:13px;line-height:1.2;letter-spacing:.01em;white-space:nowrap}
+  .hud-phase small{display:block;margin-top:3px;font-family:var(--mono);font-size:8px;letter-spacing:.09em;color:var(--muted-2);white-space:nowrap}
+  .hud-readout{
+    left:17px;top:81px;
+    display:flex;flex-direction:column;gap:3px;
+    padding:9px 11px;border-radius:12px;
+    border:1px solid rgba(120,200,255,.10);
+    background:rgba(5,13,21,.55);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  }
+  .hud-line{display:grid;grid-template-columns:30px 1fr;align-items:baseline;gap:8px;font-family:var(--mono);font-size:8.5px}
+  .hud-line span{color:var(--muted-2);letter-spacing:.11em}
+  .hud-line b{color:#dff6ff;font-size:10px;font-weight:500;letter-spacing:.02em}
+  .hud-line b.hot{color:var(--amber)}
+  .cl-hud{
+    position:absolute;z-index:6;
+    right:16px;top:15px;min-width:136px;
+    padding:10px 12px 9px;border-radius:14px;
+    border:1px solid rgba(120,200,255,.16);
+    background:rgba(5,13,21,.72);
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    text-align:right;
+  }
+  .cl-hud .cl-label{font-family:var(--mono);font-size:7.5px;letter-spacing:.15em;color:var(--muted-2)}
+  .cl-hud b{display:inline-block;margin-top:3px;font-family:var(--mono);font-size:30px;line-height:1;font-weight:500;letter-spacing:-.06em;color:#f2fdff}
+  .cl-hud b small{font-family:var(--mono);font-size:9px;font-weight:400;letter-spacing:.08em;color:var(--muted);margin-left:3px}
+  .cl-hud .cl-track{height:3px;margin-top:8px;border-radius:99px;background:rgba(150,210,255,.14);overflow:hidden}
+  .cl-hud .cl-track i{display:block;height:100%;width:30%;border-radius:inherit;background:linear-gradient(90deg,var(--teal),var(--cyan));box-shadow:0 0 10px rgba(85,226,255,.4);transition:width .2s ease,background .2s ease}
+  .cl-hud.warn .cl-track i{background:linear-gradient(90deg,var(--amber),#ffd166);box-shadow:0 0 10px rgba(255,184,77,.4)}
+  .cl-hud.alert .cl-track i{background:linear-gradient(90deg,var(--red),#ff9b6a);box-shadow:0 0 12px rgba(255,107,122,.55);animation:clPulse .82s ease-in-out infinite}
+  .pressure-key{
+    position:absolute;z-index:5;right:14px;bottom:31px;
+    display:flex;align-items:center;gap:5px;
+    font-family:var(--mono);font-size:6.5px;letter-spacing:.08em;color:rgba(180,206,222,.62);
+    pointer-events:none;text-shadow:0 1px 6px rgba(0,0,0,.8);
+  }
+  .pressure-key b{font-weight:500;color:rgba(218,241,255,.82);letter-spacing:.12em}
+  .pressure-key i{display:block;width:74px;height:4px;border-radius:99px;background:linear-gradient(90deg,#123b8f,#1d7fd0,#2ec7c9,#f2b35c,#e64a3f);box-shadow:0 0 10px rgba(236,103,69,.18)}
+  @keyframes clPulse{0%,100%{opacity:.55}50%{opacity:1}}
+  .stage-note{
+    left:16px;bottom:52px;max-width:calc(100% - 130px);
+    font-size:10px;line-height:1.5;color:rgba(224,246,255,.68);
+    text-shadow:0 1px 8px rgba(0,0,0,.65);
+  }
+  .stage-note b{color:var(--cyan);font-weight:500}
+  .stage-legend{
+    position:absolute;z-index:5;left:16px;right:16px;bottom:14px;
+    display:flex;align-items:center;gap:8px;
+    font-family:var(--mono);font-size:8px;letter-spacing:.08em;color:var(--muted-2);
+    pointer-events:none;
+  }
+  .legend-bar{
+    display:block;width:74px;height:4px;border-radius:99px;
+    background:linear-gradient(90deg,#1d4f6b,#2dd4bf,#fbbf24);
+    box-shadow:0 0 10px rgba(53,224,194,.25);
+  }
+  .stage-legend .legend-sep{margin-left:auto;color:rgba(127,150,172,.7)}
+  .loading{
+    position:absolute;z-index:9;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:5px;background:rgba(4,10,16,.88);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    transition:opacity .35s ease,visibility .35s ease;
+    font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--muted);
+  }
+  .loading strong{font-family:var(--sans);font-size:15px;letter-spacing:.02em;color:var(--text);font-weight:600}
+  .loading.hidden{opacity:0;visibility:hidden;pointer-events:none}
+
+  /* ---------- side panel ---------- */
+  .panel{
+    min-width:0;
+    border-radius:var(--radius);
+    border:1px solid var(--line);
+    background:linear-gradient(165deg,rgba(9,20,32,.96),rgba(5,11,19,.96));
+    box-shadow:var(--shadow);
+    padding:16px;
+    overflow:hidden;
+  }
+  .panel.locked .control-card{opacity:.72}
+  .panel.locked .range{cursor:not-allowed}
+  .panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px}
+  .panel-head h2{margin:0;font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.15em;color:#dff6ff}
+  .panel-head p{margin:5px 0 0;font-size:10px;line-height:1.4;color:var(--muted-2)}
+  .tag{
+    flex:0 0 auto;padding:5px 7px;border-radius:6px;border:1px solid rgba(150,210,255,.12);
+    font-family:var(--mono);font-size:7px;letter-spacing:.1em;color:var(--muted-2);white-space:nowrap;
+  }
+
+  .phase-card{
+    padding:11px 12px;border-radius:14px;
+    border:1px solid rgba(150,210,255,.11);
+    background:linear-gradient(130deg,rgba(16,38,56,.55),rgba(7,17,28,.45));
+    margin-bottom:12px;
+  }
+  .phase-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-family:var(--mono);font-size:8px;letter-spacing:.08em}
+  .phase-pill{display:inline-flex;align-items:center;gap:5px;color:var(--cyan);min-width:0}
+  .phase-pill b{font-weight:500;font-size:9.5px;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .time-code{color:var(--muted-2);white-space:nowrap}
+  .timeline{position:relative;height:5px;margin:10px 0 7px;border-radius:99px;background:rgba(150,210,255,.12);overflow:hidden}
+  .timeline-fill{height:100%;width:0%;border-radius:inherit;background:linear-gradient(90deg,var(--teal),var(--cyan),var(--amber));box-shadow:0 0 12px rgba(85,226,255,.35);transition:width .06s linear}
+  .timeline-marker{position:absolute;top:-2px;width:1px;height:9px;background:rgba(230,248,255,.28);transform:translateX(-.5px)}
+  .timeline-marker.active{background:var(--amber);box-shadow:0 0 8px rgba(255,184,77,.5)}
+  .timeline-labels{display:flex;justify-content:space-between;font-family:var(--mono);font-size:7px;color:var(--muted-2);letter-spacing:.04em}
+
+  .controls{display:flex;flex-direction:column;gap:9px}
+  .control-card{
+    --accent:var(--cyan);
+    padding:10px 11px 7px;border-radius:13px;
+    border:1px solid rgba(150,210,255,.10);
+    background:linear-gradient(145deg,rgba(9,20,32,.78),rgba(6,13,22,.52));
+    transition:border-color .2s ease,background .2s ease,opacity .2s ease;
+  }
+  .control-card:focus-within{border-color:rgba(150,210,255,.24);background:linear-gradient(145deg,rgba(12,27,43,.9),rgba(7,15,25,.66))}
+  .control-card.airspeed{--accent:var(--cyan)}
+  .control-card.alpha{--accent:#ff9d72}
+  .control-card.slat{--accent:var(--teal)}
+  .control-card.flap{--accent:var(--blue)}
+  .control-card.spoiler{--accent:var(--amber)}
+  .control-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:1px}
+  .control-title{display:flex;align-items:baseline;gap:7px;min-width:0}
+  .control-title .dot{width:5px;height:5px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);flex:0 0 auto;transform:translateY(-1px)}
+  .control-title label{font-size:12px;font-weight:600;letter-spacing:.01em;white-space:nowrap}
+  .control-title small{font-family:var(--mono);font-size:7.5px;letter-spacing:.08em;color:var(--muted-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .control-value{font-family:var(--mono);font-size:21px;line-height:1;font-weight:500;letter-spacing:-.04em;color:#effcff;white-space:nowrap}
+  .control-value small{font-family:var(--mono);font-size:9px;letter-spacing:.04em;color:var(--muted);margin-left:2px;font-weight:400}
+  .control-sub{margin:4px 0 0;font-size:9px;line-height:1.35;color:var(--muted-2)}
+  .range-wrap{position:relative;margin-top:2px}
+  .range{
+    -webkit-appearance:none;appearance:none;
+    display:block;width:100%;height:38px;margin:0;
+    background:transparent;cursor:pointer;touch-action:pan-y;
+  }
+  .range:focus{outline:none}
+  .range::-webkit-slider-runnable-track{
+    height:5px;border-radius:99px;
+    background:linear-gradient(90deg,var(--accent) 0 var(--p,50%),rgba(150,210,255,.16) var(--p,50%) 100%);
+    box-shadow:inset 0 1px 1px rgba(0,0,0,.25);
+  }
+  .range::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;
+    width:27px;height:27px;margin-top:-11px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,#f2ffff 0 17%,var(--accent) 50%,#073045 100%);
+    border:2px solid rgba(235,253,255,.9);
+    box-shadow:0 0 0 4px rgba(85,226,255,.09),0 3px 12px rgba(0,0,0,.38),0 0 20px rgba(85,226,255,.22);
+    transition:transform .12s ease;
+  }
+  .range:active::-webkit-slider-thumb{transform:scale(1.08)}
+  .range::-moz-range-track{height:5px;border-radius:99px;background:rgba(150,210,255,.16)}
+  .range::-moz-range-progress{height:5px;border-radius:99px;background:var(--accent)}
+  .range::-moz-range-thumb{
+    width:25px;height:25px;border-radius:50%;border:2px solid rgba(235,253,255,.9);
+    background:radial-gradient(circle at 35% 30%,#f2ffff 0 17%,var(--accent) 50%,#073045 100%);
+    box-shadow:0 0 0 4px rgba(85,226,255,.09),0 3px 12px rgba(0,0,0,.38);
+  }
+  .range-labels{display:flex;justify-content:space-between;gap:4px;font-family:var(--mono);font-size:7px;line-height:1.25;color:var(--muted-2);letter-spacing:.03em;margin-top:-2px}
+  .range-labels span{white-space:nowrap}
+  .control-card .range:disabled{opacity:.62}
+
+  .auto-btn{
+    width:100%;min-height:51px;margin-top:12px;
+    display:flex;align-items:center;gap:9px;
+    padding:9px 12px;border-radius:13px;border:1px solid rgba(255,184,77,.26);
+    background:linear-gradient(100deg,rgba(255,184,77,.14),rgba(85,226,255,.07));
+    cursor:pointer;text-align:left;
+    transition:transform .15s ease,border-color .2s ease,background .2s ease,box-shadow .2s ease;
+    position:relative;overflow:hidden;
+  }
+  .auto-btn::before{
+    content:"";position:absolute;inset:0;
+    background:linear-gradient(100deg,transparent,rgba(255,255,255,.06),transparent);
+    transform:translateX(-100%);transition:transform .5s ease;
+  }
+  .auto-btn:hover{border-color:rgba(255,184,77,.48);box-shadow:0 0 26px rgba(255,184,77,.08)}
+  .auto-btn:hover::before{transform:translateX(100%)}
+  .auto-btn:active{transform:scale(.995)}
+  .auto-icon{
+    width:30px;height:30px;border-radius:9px;flex:0 0 auto;display:grid;place-items:center;
+    background:rgba(255,184,77,.14);border:1px solid rgba(255,184,77,.24);
+    color:var(--amber);font-size:13px;
+  }
+  .auto-copy{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .auto-copy b{font-size:12.5px;font-weight:600;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .auto-copy small{font-family:var(--mono);font-size:7.5px;letter-spacing:.07em;color:var(--muted-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .auto-btn.running{border-color:rgba(255,107,122,.32);background:linear-gradient(100deg,rgba(255,107,122,.12),rgba(255,184,77,.05))}
+  .auto-btn.running .auto-icon{color:var(--red);border-color:rgba(255,107,122,.24);background:rgba(255,107,122,.12)}
+  .auto-btn.complete{border-color:rgba(53,224,194,.25);background:linear-gradient(100deg,rgba(53,224,194,.1),rgba(85,226,255,.05))}
+  .auto-btn.complete .auto-icon{color:var(--teal);border-color:rgba(53,224,194,.25);background:rgba(53,224,194,.1)}
+
+  .telemetry{
+    display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;
+    margin-top:12px;
+  }
+  .metric{
+    min-width:0;padding:8px 8px 7px;border-radius:10px;
+    border:1px solid rgba(150,210,255,.09);
+    background:rgba(7,16,27,.58);
+  }
+  .metric span{display:block;font-family:var(--mono);font-size:7px;letter-spacing:.09em;color:var(--muted-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .metric b{display:block;margin-top:4px;font-family:var(--mono);font-size:14px;font-weight:500;line-height:1;letter-spacing:-.03em;color:#e8f8ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .metric b small{font-family:var(--mono);font-size:8px;letter-spacing:.03em;color:var(--muted);font-weight:400;margin-left:2px}
+  .metric-cl{position:relative}
+  .metric-cl b{color:#7dffd4;transition:color .2s ease}
+  .metric-cl .cl-meter{height:4px;margin-top:6px;border-radius:99px;background:rgba(150,210,255,.12);overflow:hidden}
+  .metric-cl .cl-meter i{display:block;height:100%;width:0%;border-radius:inherit;background:linear-gradient(90deg,#1fbf8d,#62ffd0);box-shadow:0 0 9px rgba(53,224,194,.35);transition:width .2s ease,background .2s ease}
+  .metric-cl.warn b{color:var(--amber)}
+  .metric-cl.warn .cl-meter i{background:linear-gradient(90deg,#d9982f,#ffd166);box-shadow:0 0 9px rgba(255,184,77,.3)}
+  .metric-cl.alert b{color:var(--red);animation:clPulse .82s ease-in-out infinite}
+  .metric-cl.alert .cl-meter i{background:linear-gradient(90deg,#d7374b,#ff8263);box-shadow:0 0 12px rgba(255,107,122,.5);animation:clPulse .82s ease-in-out infinite}
+  .status-card{
+    margin-top:10px;padding:10px 11px 9px;border-radius:12px;
+    border:1px solid rgba(150,210,255,.10);
+    background:linear-gradient(140deg,rgba(10,22,35,.72),rgba(5,12,20,.5));
+  }
+  .status-head{display:flex;justify-content:space-between;align-items:center;gap:8px;font-family:var(--mono);font-size:8px;letter-spacing:.08em;color:var(--muted-2)}
+  .status-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 7px;border-radius:99px;border:1px solid rgba(53,224,194,.26);background:rgba(53,224,194,.08);color:var(--teal);font-size:8px;letter-spacing:.02em;white-space:nowrap}
+  .status-chip::before{content:"";width:4px;height:4px;border-radius:50%;background:currentColor;box-shadow:0 0 7px currentColor}
+  .status-chip.warn{color:var(--amber);border-color:rgba(255,184,77,.28);background:rgba(255,184,77,.08)}
+  .status-chip.bad{color:var(--red);border-color:rgba(255,107,122,.3);background:rgba(255,107,122,.08)}
+  .sep-track{height:4px;border-radius:99px;margin-top:9px;background:rgba(150,210,255,.11);overflow:hidden}
+  .sep-track i{display:block;width:0%;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--teal),var(--amber),var(--red));transition:width .2s ease}
+  .status-copy{margin:7px 0 0;color:var(--muted);font-size:9.5px;line-height:1.5;min-height:28px}
+  .panel-foot{
+    display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;
+    margin-top:11px;padding-top:9px;border-top:1px solid rgba(150,210,255,.08);
+    font-family:var(--mono);font-size:7px;letter-spacing:.06em;color:var(--muted-2);
+  }
+
+  footer{
+    margin-top:18px;padding-top:12px;border-top:1px solid rgba(150,210,255,.08);
+    display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    color:var(--muted-2);font-size:9.5px;line-height:1.55;
+  }
+  footer b{color:var(--muted);font-weight:500}
+  .footer-note{max-width:860px}
+
+  /* ---------- responsive ---------- */
+  @media (max-width:1080px){
+    .layout{grid-template-columns:minmax(0,1.5fr) minmax(320px,.92fr);gap:14px}
+    .stage{min-height:330px}
+    .hero h1{font-size:clamp(27px,4.3vw,44px)}
+    .hud-phase small{display:none}
+  }
+  @media (max-width:980px){
+    .layout{grid-template-columns:1fr}
+    .stage{aspect-ratio:1.32;min-height:330px}
+    .panel{padding:14px}
+    .controls{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .control-card{padding:10px 10px 6px}
+    .auto-btn{margin-top:10px}
+    .telemetry{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .hero{align-items:flex-start}
+    .hero-meta{display:none}
+  }
+  @media (max-width:680px){
+    .page{padding:14px 10px calc(22px + env(safe-area-inset-bottom))}
+    .topbar{margin-bottom:11px}
+    .brand-mark{width:36px;height:36px;border-radius:12px;font-size:16px}
+    .brand-copy b{font-size:10px;letter-spacing:.12em}
+    .brand-copy small{font-size:7.5px;letter-spacing:.11em}
+    .top-chips{gap:4px}
+    .chip{padding:5px 7px;font-size:7.5px}
+    .hero{margin-bottom:13px}
+    .hero h1{font-size:clamp(25px,7.2vw,36px);line-height:1.04}
+    .hero p{font-size:11px;line-height:1.55;margin-top:7px;max-width:100%}
+    .layout{gap:11px}
+    .stage-card{padding:6px;border-radius:20px}
+    .stage{aspect-ratio:1.25;min-height:248px;border-radius:17px}
+    .hud-phase{left:10px;top:10px;padding:7px 8px;border-radius:11px;gap:7px;max-width:calc(100% - 118px)}
+    .hud-phase .phase-icon{width:26px;height:26px;border-radius:8px;font-size:13px}
+    .hud-phase b{font-size:10.5px}
+    .hud-phase small{font-size:6.5px;margin-top:2px}
+    .hud-readout{left:10px;top:61px;padding:6px 7px;border-radius:9px;gap:1px}
+    .hud-line{grid-template-columns:25px 1fr;gap:4px;font-size:6.5px}
+    .hud-line b{font-size:7.5px}
+    .cl-hud{right:10px;top:10px;min-width:105px;padding:8px 9px 7px;border-radius:11px}
+    .cl-hud .cl-label{font-size:6px;letter-spacing:.1em}
+    .cl-hud b{font-size:23px}
+    .cl-hud b small{font-size:7px}
+    .cl-hud .cl-track{margin-top:6px;height:2.5px}
+    .stage-note{left:10px;bottom:38px;max-width:calc(100% - 100px);font-size:8px;line-height:1.4}
+    .stage-legend{left:10px;right:10px;bottom:9px;font-size:6.5px;gap:5px}
+    .legend-bar{width:52px;height:3px}
+    .stage-legend .legend-sep{display:none}
+    .pressure-key{display:none}
+    .metric-cl .cl-meter{height:3px;margin-top:4px}
+    .panel{padding:12px;border-radius:19px}
+    .panel-head{margin-bottom:9px}
+    .panel-head h2{font-size:10px}
+    .panel-head p{font-size:8.5px}
+    .tag{font-size:6px;padding:4px 5px}
+    .phase-card{padding:9px 10px;margin-bottom:9px}
+    .phase-pill b{font-size:8.5px}
+    .controls{grid-template-columns:1fr;gap:7px}
+    .control-card{padding:9px 10px 5px}
+    .control-title label{font-size:11.5px}
+    .control-title small{font-size:6.5px}
+    .control-value{font-size:19px}
+    .control-sub{font-size:8px;margin-top:3px}
+    .range{height:46px}
+    .range::-webkit-slider-runnable-track{height:6px}
+    .range::-webkit-slider-thumb{width:31px;height:31px;margin-top:-13px}
+    .range::-moz-range-track{height:6px}
+    .range::-moz-range-thumb{width:29px;height:29px}
+    .range-labels{font-size:6.5px}
+    .auto-btn{min-height:50px;margin-top:9px;padding:8px 10px;border-radius:11px}
+    .auto-icon{width:28px;height:28px;border-radius:8px}
+    .auto-copy b{font-size:12px}
+    .auto-copy small{font-size:6.8px}
+    .telemetry{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin-top:9px}
+    .metric{padding:7px 6px 6px;border-radius:8px}
+    .metric span{font-size:6.2px;letter-spacing:.04em}
+    .metric b{font-size:12.5px}
+    .metric b small{font-size:7px}
+    .status-card{margin-top:8px;padding:9px 9px 8px}
+    .status-head{font-size:7px}
+    .status-chip{font-size:7px;padding:3px 6px}
+    .status-copy{font-size:8.5px;line-height:1.45;min-height:24px}
+    .panel-foot{font-size:6.2px;gap:5px;margin-top:8px;padding-top:7px}
+    footer{font-size:8px;line-height:1.5;margin-top:12px;padding-top:9px;gap:5px;display:block}
+    .footer-note{margin-top:4px}
+  }
+  @media (max-width:480px){
+    .topbar{flex-direction:column;align-items:flex-start;gap:9px}
+    .top-chips{justify-content:flex-start;width:100%}
+    .brand-copy small{white-space:normal;line-height:1.35;max-width:230px}
+  }
+  @media (max-width:380px){
+    .hero h1{font-size:23px}
+    .hero p{font-size:10px}
+    .stage{aspect-ratio:1.12;min-height:245px}
+    .hud-phase b{font-size:10px}
+    .cl-hud b{font-size:21px}
+    .cl-hud{min-width:98px}
+    .telemetry{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .range{height:46px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.001ms!important}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">✈</div>
+      <div class="brand-copy">
+        <b>ULTIMATE FLIGHT LAB</b>
+        <small>UNIFIED AERO · 2D PARTICLE FLOW</small>
+      </div>
+    </div>
+    <div class="top-chips" aria-label="模型标识">
+      <span class="chip live"><i></i>LIVE SOLVER</span>
+      <span class="chip">NACA 2412</span>
+      <span class="chip">α 可调 · -4°…+16°</span>
+      <span class="chip">5 CHANNELS</span>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div>
+      <h1>终极飞行 · 流场演示</h1>
+      <p>空速、前缘缝翼、后缘襟翼与扰流板共享同一套粒子流场。观察升力如何被建立、保持与破坏，以及扰流板后的湍流如何向后影响襟翼上方的气流。</p>
+    </div>
+    <div class="hero-meta">
+      <span>REYNOLDS <b>LOW</b></span>
+      <span>MODEL <b>POTENTIAL + PARTICLES</b></span>
+    </div>
+  </section>
+
+  <main class="layout">
+    <section class="stage-card" aria-label="二维流场可视化">
+      <div class="stage" id="stage">
+        <canvas id="flowCanvas" aria-label="翼型、缝翼、襟翼、扰流板与粒子流场"></canvas>
+
+        <div class="hud hud-phase">
+          <span class="phase-icon" id="phaseIcon" aria-hidden="true">🕹</span>
+          <div>
+            <b id="phaseText">手动控制</b>
+            <small id="phaseSub">五通道独立可调</small>
+          </div>
+        </div>
+
+        <div class="hud hud-readout" aria-label="当前参数">
+          <div class="hud-line"><span>α</span><b id="hudAlpha">5.0°</b></div>
+          <div class="hud-line"><span>V</span><b id="hudSpeed">55%</b></div>
+          <div class="hud-line"><span>构型</span><b id="hudConfig">0° / 8° / 0°</b></div>
+        </div>
+
+        <div class="cl-hud" aria-label="当前升力系数">
+          <span class="cl-label">LIFT COEFFICIENT</span>
+          <div><b id="hudCl">0.00</b><small>CL</small></div>
+          <div class="cl-track"><i id="clBar"></i></div>
+        </div>
+
+        <div class="stage-note" id="stageNote">
+          <b>统一流场</b> · 拖动任一滑块，几何、环量与粒子同步更新。
+        </div>
+
+        <div class="stage-legend" aria-hidden="true">
+          <span>低速</span><i class="legend-bar"></i><span>高速</span>
+          <span class="legend-sep">流线 · 粒子 · 升力矢量</span>
+        </div>
+        <div class="pressure-key" aria-hidden="true">
+          <b>CP</b><i></i><span>低压</span><span>高压</span>
+        </div>
+
+        <div class="loading" id="loading">
+          <strong>正在初始化统一流场</strong>
+          <span>BUILDING GEOMETRY / SEEDING PARTICLES</span>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel" id="panel">
+      <div class="panel-head">
+        <div>
+          <h2>FLIGHT CONTROL</h2>
+          <p>五个独立通道 · 实时耦合</p>
+        </div>
+        <span class="tag">2D / INCOMPRESSIBLE</span>
+      </div>
+
+      <div class="phase-card">
+        <div class="phase-top">
+          <span class="phase-pill"><span id="phaseChip">🕹 手动控制</span></span>
+          <span class="time-code" id="timeCode">T+00.0s</span>
+        </div>
+        <div class="timeline" id="timeline" aria-hidden="true">
+          <div class="timeline-fill" id="timelineFill"></div>
+          <i class="timeline-marker" style="left:0%"></i>
+          <i class="timeline-marker" style="left:25%"></i>
+          <i class="timeline-marker" style="left:50%"></i>
+          <i class="timeline-marker" style="left:75%"></i>
+          <i class="timeline-marker" style="left:100%"></i>
+        </div>
+        <div class="timeline-labels"><span>0s</span><span>4s</span><span>8s</span><span>12s</span><span>16s</span></div>
+      </div>
+
+      <div class="controls" id="controls">
+        <section class="control-card airspeed">
+          <div class="control-head">
+            <div class="control-title">
+              <i class="dot"></i>
+              <label for="airspeedRange">空速</label>
+              <small>AIRSPEED</small>
+            </div>
+            <div class="control-value"><span id="airspeedValue">55</span><small>%</small></div>
+          </div>
+          <p class="control-sub">全局来流速度 · 同时缩放粒子与湍流</p>
+          <div class="range-wrap">
+            <input class="range" id="airspeedRange" type="range" min="0" max="100" step="1" value="55" aria-label="空速百分比">
+          </div>
+          <div class="range-labels"><span>0%</span><span>50%</span><span>100%</span></div>
+        </section>
+
+        <section class="control-card alpha">
+          <div class="control-head">
+            <div class="control-title">
+              <i class="dot"></i>
+              <label for="alphaRange">迎角 α</label>
+              <small>ANGLE OF ATTACK</small>
+            </div>
+            <div class="control-value"><span id="alphaValue">5.0</span><small>°</small></div>
+          </div>
+          <p class="control-sub">全局来流方向 · 实时改变升力与压力云图</p>
+          <div class="range-wrap">
+            <input class="range" id="alphaRange" type="range" min="-4" max="16" step="0.5" value="5" aria-label="迎角">
+          </div>
+          <div class="range-labels"><span>-4°</span><span>6°</span><span>+16°</span></div>
+        </section>
+
+        <section class="control-card slat">
+          <div class="control-head">
+            <div class="control-title">
+              <i class="dot"></i>
+              <label for="slatRange">前缘缝翼</label>
+              <small>SLAT</small>
+            </div>
+            <div class="control-value"><span id="slatValue">0</span><small>°</small></div>
+          </div>
+          <p class="control-sub">缝隙射流 · 引导上表面气流重新附着</p>
+          <div class="range-wrap">
+            <input class="range" id="slatRange" type="range" min="0" max="20" step="1" value="0" aria-label="前缘缝翼角度">
+          </div>
+          <div class="range-labels"><span>0° 收起</span><span>10°</span><span>20° 全放</span></div>
+        </section>
+
+        <section class="control-card flap">
+          <div class="control-head">
+            <div class="control-title">
+              <i class="dot"></i>
+              <label for="flapRange">后缘襟翼</label>
+              <small>FLAP</small>
+            </div>
+            <div class="control-value"><span id="flapValue">8</span><small>°</small></div>
+          </div>
+          <p class="control-sub">增加弯度与环量 · 提高升力与阻力</p>
+          <div class="range-wrap">
+            <input class="range" id="flapRange" type="range" min="0" max="30" step="1" value="8" aria-label="后缘襟翼角度">
+          </div>
+          <div class="range-labels"><span>0° 收起</span><span>15°</span><span>30° 全放</span></div>
+        </section>
+
+        <section class="control-card spoiler">
+          <div class="control-head">
+            <div class="control-title">
+              <i class="dot"></i>
+              <label for="spoilerRange">扰流板</label>
+              <small>SPOILER</small>
+            </div>
+            <div class="control-value"><span id="spoilerValue">0</span><small>°</small></div>
+          </div>
+          <p class="control-sub">上表面 60% 弦长 · 破坏升力并制造湍流</p>
+          <div class="range-wrap">
+            <input class="range" id="spoilerRange" type="range" min="0" max="90" step="1" value="0" aria-label="扰流板角度">
+          </div>
+          <div class="range-labels"><span>0° 贴面</span><span>45°</span><span>90° 全升</span></div>
+        </section>
+      </div>
+
+      <button class="auto-btn" id="autoBtn" type="button" aria-pressed="false">
+        <span class="auto-icon" id="autoIcon" aria-hidden="true">▶</span>
+        <span class="auto-copy">
+          <b id="autoLabel">播放自动演示</b>
+          <small>16 秒 · 起飞 / 巡航 / 进近 / 触地</small>
+        </span>
+      </button>
+
+      <div class="telemetry" aria-label="气动数据">
+        <div class="metric metric-cl" id="metricClCard"><span>CL 升力系数</span><b id="metricCl">0.00</b><div class="cl-meter"><i id="metricClBar"></i></div></div>
+        <div class="metric"><span>CD 阻力系数</span><b id="metricCd">0.000</b></div>
+        <div class="metric"><span>L/D 升阻比</span><b id="metricLd">0.0</b></div>
+        <div class="metric"><span>LIFT 升力</span><b id="metricLift">0.00<small>a.u.</small></b></div>
+        <div class="metric"><span>q 动压</span><b id="metricQ">0.00</b></div>
+        <div class="metric"><span>SEP 分离</span><b id="metricSep">0<small>%</small></b></div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-head">
+          <span>流场状态 / FLOW STATE</span>
+          <b class="status-chip" id="statusChip">待机</b>
+        </div>
+        <div class="sep-track"><i id="sepFill"></i></div>
+        <p class="status-copy" id="statusCopy">等待来流。拖动空速或播放自动演示开始。</p>
+      </div>
+
+      <div class="panel-foot">
+        <span>α = <b id="footAlpha">5.0°</b></span>
+        <span>MODEL: VORTEX + JET + PARTICLES</span>
+        <span>NOT INDUSTRIAL CFD</span>
+      </div>
+    </aside>
+  </main>
+
+  <footer>
+    <div class="footer-note">
+      <b>模型说明：</b>主翼使用 NACA 2412 几何与简化涡系 / 经验升力趋势；缝翼、襟翼、扰流板为独立几何体，共享同一套粒子流场。缝翼槽道、扰流板碰撞、尾流湍流与升力折减均为教学级近似，适合观察趋势，不代表真实适航数据。
+    </div>
+    <div>U∞ = <b id="footSpeed">55%</b> · α = <b id="footAlphaMain">5.0°</b> · 2D INCOMPRESSIBLE · CANVAS 2D</div>
+  </footer>
+</div>
+
+<script>
+'use strict';
+(() => {
+  const DEG = Math.PI / 180;
+  const WORLD_W = 2.00;
+  const WORLD_CX = 0.52;
+  const WORLD_CY = 0.015;
+  const LE_X = 0.08;
+  const CHORD = 0.88;
+  const HINGE_RATIO = 0.75;
+  const HINGE_X = LE_X + CHORD * HINGE_RATIO;
+  const TE_X = LE_X + CHORD;
+  const SPOILER_X = LE_X + CHORD * 0.60;
+  const SPOILER_LEN = 0.105;
+  const SLAT_CHORD = CHORD * 0.13;
+  // Slat / socket cross-section. The slat tail is deliberately blunt: its
+  // rounded trailing edge nests inside a matching U-shaped socket cut into
+  // the main leading edge. Keeping these values here means the drawn shapes,
+  // the U-groove and the particle collision polygons all stay in sync.
+  const SLAT_HINGE_X0 = LE_X + 0.0060;
+  const SLAT_HINGE_Y0 = -0.0038;
+  const SLAT_NOSE_R = 0.0018;
+  const SLAT_MAX_HALF = 0.0165;
+  const SLAT_TAIL_R = 0.0132;
+  const SLAT_CAP_DX = 0.0040;
+  const SLAT_CAP_DY = 0.0068;
+  const SOCKET_R = 0.0130;
+  const SOCKET_CX = SLAT_HINGE_X0 + SLAT_CAP_DX;
+  const SOCKET_CY = SLAT_HINGE_Y0 + SLAT_CAP_DY;
+  const SOCKET_HALF = 100 * DEG;
+  const FLAP_CHORD = TE_X - HINGE_X;
+  const AUTO_DURATION = 16;
+
+  const state = {
+    airspeed: 55,
+    alpha: 5,
+    slat: 0,
+    flap: 8,
+    spoiler: 0,
+    auto: false,
+    autoT: 0,
+    autoDone: false,
+    ready: false,
+    error: null
+  };
+
+  const el = {
+    stage: document.getElementById('stage'),
+    canvas: document.getElementById('flowCanvas'),
+    loading: document.getElementById('loading'),
+    panel: document.getElementById('panel'),
+    phaseIcon: document.getElementById('phaseIcon'),
+    phaseText: document.getElementById('phaseText'),
+    phaseSub: document.getElementById('phaseSub'),
+    phaseChip: document.getElementById('phaseChip'),
+    timeCode: document.getElementById('timeCode'),
+    timelineFill: document.getElementById('timelineFill'),
+    timelineMarkers: Array.from(document.querySelectorAll('.timeline-marker')),
+    hudAlpha: document.getElementById('hudAlpha'),
+    hudSpeed: document.getElementById('hudSpeed'),
+    hudConfig: document.getElementById('hudConfig'),
+    hudCl: document.getElementById('hudCl'),
+    clBar: document.getElementById('clBar'),
+    clHud: document.querySelector('.cl-hud'),
+    stageNote: document.getElementById('stageNote'),
+    airspeed: document.getElementById('airspeedRange'),
+    airspeedValue: document.getElementById('airspeedValue'),
+    alpha: document.getElementById('alphaRange'),
+    alphaValue: document.getElementById('alphaValue'),
+    slat: document.getElementById('slatRange'),
+    slatValue: document.getElementById('slatValue'),
+    flap: document.getElementById('flapRange'),
+    flapValue: document.getElementById('flapValue'),
+    spoiler: document.getElementById('spoilerRange'),
+    spoilerValue: document.getElementById('spoilerValue'),
+    autoBtn: document.getElementById('autoBtn'),
+    autoIcon: document.getElementById('autoIcon'),
+    autoLabel: document.getElementById('autoLabel'),
+    metricCl: document.getElementById('metricCl'),
+    metricClCard: document.getElementById('metricClCard'),
+    metricClBar: document.getElementById('metricClBar'),
+    metricCd: document.getElementById('metricCd'),
+    metricLd: document.getElementById('metricLd'),
+    metricLift: document.getElementById('metricLift'),
+    metricQ: document.getElementById('metricQ'),
+    metricSep: document.getElementById('metricSep'),
+    statusChip: document.getElementById('statusChip'),
+    statusCopy: document.getElementById('statusCopy'),
+    sepFill: document.getElementById('sepFill'),
+    footSpeed: document.getElementById('footSpeed'),
+    footAlpha: document.getElementById('footAlpha'),
+    footAlphaMain: document.getElementById('footAlphaMain')
+  };
+
+  const ctx = el.canvas.getContext('2d', { alpha: false });
+  const bgCanvas = document.createElement('canvas');
+  const bgCtx = bgCanvas.getContext('2d', { alpha: false });
+
+  let cssW = 0;
+  let cssH = 0;
+  let dpr = 1;
+  let view = null;
+  let geom = null;
+  let aero = null;
+  let particles = [];
+  let streamlines = [];
+  let sparks = [];
+  let sepZone = null;
+  let fieldTime = 0;
+  let dirty = true;
+  let bgDirty = true;
+  let lastRebuild = -1e9;
+  let lastUI = -1e9;
+  let lastTime = 0;
+  let resizeTimer = 0;
+  let collisionTotal = 0;
+  let frameCount = 0;
+  let errorShown = false;
+  let seedCursor = 0;
+
+  const tmp = { u: 0, v: 0 };
+  const tmp2 = { u: 0, v: 0 };
+
+  const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const smoothstep = (a, b, x) => {
+    const t = clamp((x - a) / (b - a || 1e-9), 0, 1);
+    return t * t * (3 - 2 * t);
+  };
+  const rand = (a = 0, b = 1) => a + Math.random() * (b - a);
+  const easeInOutCubic = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+  const easeOutExpo = t => t >= 1 ? 1 : 1 - Math.pow(2, -10 * t);
+  const phaseIndex = t => t < 4 ? 0 : t < 8 ? 1 : t < 12 ? 2 : 3;
+
+  function camber(x) {
+    const m = 0.02, p = 0.4;
+    if (x <= 0) return 0;
+    if (x < p) return m / (p * p) * (2 * p * x - x * x);
+    return m / ((1 - p) * (1 - p)) * ((1 - 2 * p) + 2 * p * x - x * x);
+  }
+  function thickness(x) {
+    return 5 * 0.12 * (
+      0.2969 * Math.sqrt(Math.max(x, 0)) -
+      0.1260 * x -
+      0.3516 * x * x +
+      0.2843 * x * x * x -
+      0.1015 * x * x * x * x
+    );
+  }
+  function profilePoint(xNorm) {
+    const yc = camber(xNorm) * CHORD;
+    const yt = thickness(xNorm) * CHORD;
+    return {
+      x: LE_X + xNorm * CHORD,
+      upper: yc + yt,
+      lower: yc - yt
+    };
+  }
+  function rotateAround(x, y, cx, cy, angle) {
+    const c = Math.cos(angle), s = Math.sin(angle);
+    const dx = x - cx, dy = y - cy;
+    return { x: cx + dx * c - dy * s, y: cy + dx * s + dy * c };
+  }
+  function dist2(x1, y1, x2, y2) {
+    const dx = x1 - x2, dy = y1 - y2;
+    return dx * dx + dy * dy;
+  }
+  function pointInPoly(x, y, poly) {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const xi = poly[i].x, yi = poly[i].y;
+      const xj = poly[j].x, yj = poly[j].y;
+      if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / ((yj - yi) || 1e-12) + xi)) {
+        inside = !inside;
+      }
+    }
+    return inside;
+  }
+  function polyCentroid(poly) {
+    let x = 0, y = 0;
+    for (const p of poly) { x += p.x; y += p.y; }
+    return { x: x / Math.max(poly.length, 1), y: y / Math.max(poly.length, 1) };
+  }
+  function segmentIntersection(ax, ay, bx, by, cx, cy, dx, dy) {
+    const rX = bx - ax, rY = by - ay;
+    const sX = dx - cx, sY = dy - cy;
+    const denom = rX * sY - rY * sX;
+    if (Math.abs(denom) < 1e-12) return null;
+    const qpx = cx - ax, qpy = cy - ay;
+    const t = (qpx * sY - qpy * sX) / denom;
+    const u = (qpx * rY - qpy * rX) / denom;
+    if (t < 0 || t > 1 || u < 0 || u > 1) return null;
+    return { t, u, x: ax + rX * t, y: ay + rY * t };
+  }
+  function roundedRectPath(c, x, y, w, h, r) {
+    const rr = Math.min(r, w * 0.5, h * 0.5);
+    c.beginPath();
+    c.moveTo(x + rr, y);
+    c.lineTo(x + w - rr, y);
+    c.quadraticCurveTo(x + w, y, x + w, y + rr);
+    c.lineTo(x + w, y + h - rr);
+    c.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
+    c.lineTo(x + rr, y + h);
+    c.quadraticCurveTo(x, y + h, x, y + h - rr);
+    c.lineTo(x, y + rr);
+    c.quadraticCurveTo(x, y, x + rr, y);
+    c.closePath();
+  }
+
+  /* =========================================================
+     Geometry
+     Every moving part is built in world coordinates here. The
+     same polygons/segments are used by the renderer and by the
+     particle collision pass, so what you see is what the flow hits.
+     ========================================================= */
+  function buildGeometry() {
+    const N = 64;
+    const mainUpper = [];
+    const mainLower = [];
+    for (let i = 0; i <= N; i++) {
+      const u = (i / N) * HINGE_RATIO;
+      const pp = profilePoint(u);
+      mainUpper.push({ x: pp.x, y: pp.upper });
+      mainLower.push({ x: pp.x, y: pp.lower });
+    }
+    const hingeProfile = profilePoint(HINGE_RATIO);
+    const hingeY = hingeProfile.upper * 0.5 + hingeProfile.lower * 0.5;
+
+    // ---- Main-wing leading-edge U socket -------------------------------
+    // The main nose is not a plain NACA tip: a rounded C-shaped groove is
+    // carved into it. The slat's blunt tail plugs this groove at 0°.
+    // The socket is a fixed part of the main wing, so when the slat moves
+    // forward/down the cavity is exposed behind it.
+    const socketPoints = [];
+    const SOCKET_SEGMENTS = 28;
+    for (let i = 0; i <= SOCKET_SEGMENTS; i++) {
+      const a = SOCKET_HALF - (i / SOCKET_SEGMENTS) * (2 * SOCKET_HALF);
+      socketPoints.push({
+        x: SOCKET_CX + SOCKET_R * Math.cos(a),
+        y: SOCKET_CY + SOCKET_R * Math.sin(a)
+      });
+    }
+    const upperLip = socketPoints[0];
+    const lowerLip = socketPoints[socketPoints.length - 1];
+    const socket = {
+      cx: SOCKET_CX,
+      cy: SOCKET_CY,
+      r: SOCKET_R,
+      half: SOCKET_HALF,
+      points: socketPoints,
+      upperLip,
+      lowerLip
+    };
+
+    // Outer skin starts at the socket lips; the NACA samples forward of
+    // those lips are intentionally omitted, leaving the U-groove open.
+    const outerUpper = [{ x: upperLip.x, y: upperLip.y }].concat(
+      mainUpper.filter(p => p.x > upperLip.x + 1e-5)
+    );
+    const outerLower = [{ x: lowerLip.x, y: lowerLip.y }].concat(
+      mainLower.filter(p => p.x > lowerLip.x + 1e-5)
+    );
+
+    // C-shaped main polygon: upper skin -> hinge -> lower skin -> socket
+    // arc from the lower lip around the back of the groove to the upper lip.
+    const mainPoly = outerUpper.slice();
+    for (let i = outerLower.length - 1; i >= 0; i--) mainPoly.push(outerLower[i]);
+    for (let i = socketPoints.length - 1; i >= 0; i--) {
+      mainPoly.push({ x: socketPoints[i].x, y: socketPoints[i].y });
+    }
+
+    // At 0° the main element keeps its complete, smooth NACA nose. The
+    // slat is represented by a flush panel seam on that nose rather than a
+    // protruding body, so the wing remains one continuous surface. As soon
+    // as the slat starts to travel, the C-shaped socket polygon takes over.
+    const closedMainPoly = mainUpper.slice();
+    for (let i = mainLower.length - 1; i >= 0; i--) closedMainPoly.push(mainLower[i]);
+    // The main element is always the complete smooth NACA profile. The
+    // leading-edge U-groove is the gap between this fixed nose and the
+    // slat's concave inner surface, so it appears only as the slat moves.
+    const mainActivePoly = closedMainPoly;
+
+    // Flap: rear 25% of the full wing profile, rotated down about the hinge.
+    const NF = 36;
+    const flapAngle = -state.flap * DEG;
+    const flapUpper = [];
+    const flapLower = [];
+    for (let i = 0; i <= NF; i++) {
+      const u = HINGE_RATIO + (i / NF) * (1 - HINGE_RATIO);
+      const pp = profilePoint(u);
+      const localX = pp.x - HINGE_X;
+      const up = rotateAround(localX, pp.upper - hingeY, 0, 0, flapAngle);
+      const lo = rotateAround(localX, pp.lower - hingeY, 0, 0, flapAngle);
+      flapUpper.push({ x: HINGE_X + up.x, y: hingeY + up.y });
+      flapLower.push({ x: HINGE_X + lo.x, y: hingeY + lo.y });
+    }
+    const flapPoly = flapUpper.slice();
+    for (let i = flapLower.length - 1; i >= 0; i--) flapPoly.push(flapLower[i]);
+
+    // Slat: a rigid, slender crescent. Its shape is built once from the
+    // fixed main-nose contour: the outer skin follows the NACA surface and
+    // the inner skin is offset inward by a constant thickness. The whole
+    // rigid body is translated on a linear track and then rotated a small
+    // amount about a rear anchor. It is never scaled or reshaped. The
+    // 15%-chord cap overlaps the main slightly at 0° (permitted by the
+    // sliding-track design), so the outer mold line is smooth.
+    const slatFrac = state.slat / 20;
+    const SLAT_FWD_MAX = 0.050;   // forward translation at 20°
+    const SLAT_DOWN_MAX = 0.018;  // downward translation at 20°
+    const slatOffsetX = -SLAT_FWD_MAX * slatFrac;
+    const slatOffsetY = -SLAT_DOWN_MAX * slatFrac;
+    const seamX = LE_X + CHORD * 0.15;
+
+    const SLAT_UP_SEG = 28;
+    const SLAT_LO_SEG = 28;
+    const baseUpper = [];
+    const baseLower = [];
+    for (let i = 0; i <= SLAT_UP_SEG; i++) {
+      const x = lerp(seamX, LE_X, i / SLAT_UP_SEG);
+      baseUpper.push({ x, y: mainUpperAt(x, mainUpper).y });
+    }
+    for (let i = 1; i <= SLAT_LO_SEG; i++) {
+      const x = lerp(LE_X, seamX, i / SLAT_LO_SEG);
+      baseLower.push({ x, y: mainUpperAt(x, mainLower).y });
+    }
+    const slatBase = baseUpper.concat(baseLower);
+
+    // Outward normal of the fixed main nose, oriented away from a point
+    // inside the wing. The slat outer skin is essentially on the main skin;
+    // the inner skin goes *into* the wing so the stowed body is hidden by
+    // overlap instead of protruding as a bump.
+    const inside = { x: LE_X + 0.14, y: -0.004 };
+    const slatOuterLocal = [];
+    const slatInnerLocal = [];
+    for (let i = 0; i < slatBase.length; i++) {
+      const p = slatBase[i];
+      const a = slatBase[Math.max(0, i - 1)];
+      const b = slatBase[Math.min(slatBase.length - 1, i + 1)];
+      const tx = b.x - a.x;
+      const ty = b.y - a.y;
+      const tl = Math.hypot(tx, ty) || 1;
+      let nx = ty / tl;
+      let ny = -tx / tl;
+      if ((p.x - inside.x) * nx + (p.y - inside.y) * ny < 0) {
+        nx = -nx; ny = -ny;
+      }
+      const s = i / (slatBase.length - 1);
+      const env = Math.sin(Math.PI * s);
+      // Constant thickness profile: about 3.4% of main chord at the
+      // thickest point, tapering to thin tips. It never depends on angle.
+      const thick = 0.0300 * Math.pow(env, 0.62);
+      slatOuterLocal.push({ x: p.x + nx * 0.0004, y: p.y + ny * 0.0004 });
+      slatInnerLocal.push({ x: p.x - nx * thick, y: p.y - ny * thick });
+    }
+
+    // 1) Apply the linear X/Y translation first.
+    const placeSlat = p => ({
+      x: p.x + slatOffsetX,
+      y: p.y + slatOffsetY
+    });
+
+    // 2) Then add a restrained nose-down rotation about a point inside the
+    // rear of the slat. The maximum is 10° (θ=20° -> 10°); the slat's own
+    // local geometry is never scaled or rebuilt.
+    const slatAnchorLocal = {
+      x: seamX - 0.020,
+      y: (slatOuterLocal[0].y + slatOuterLocal[slatOuterLocal.length - 1].y) * 0.5
+    };
+    const slatAnchorRaw = {
+      x: slatAnchorLocal.x + slatOffsetX,
+      y: slatAnchorLocal.y + slatOffsetY
+    };
+    const slatTilt = (state.slat / 20) * 10 * DEG;
+    const rotateSlat = p => rotateAround(
+      p.x, p.y, slatAnchorRaw.x, slatAnchorRaw.y, slatTilt
+    );
+
+    // Raw translated points are used by drawSlat under ctx.rotate();
+    // rotated points are returned for collision, labels and annotations.
+    const slatOuterRaw = slatOuterLocal.map(placeSlat);
+    const slatInnerRaw = slatInnerLocal.map(placeSlat);
+    const slatMidRaw = slatInnerRaw.map((p, i) => ({
+      x: (p.x + slatOuterRaw[i].x) / 2,
+      y: (p.y + slatOuterRaw[i].y) / 2
+    }));
+    const slatOuter = slatOuterRaw.map(rotateSlat);
+    const slatInner = slatInnerRaw.map(rotateSlat);
+    const slatMid = slatInner.map((p, i) => ({
+      x: (p.x + slatOuter[i].x) / 2,
+      y: (p.y + slatOuter[i].y) / 2
+    }));
+    const slatUpper = slatOuter.slice(0, SLAT_UP_SEG + 1);
+    const slatLower = slatOuter.slice(SLAT_UP_SEG);
+    const innerUpper = slatInner.slice(0, SLAT_UP_SEG + 1);
+    const innerLower = slatInner.slice(SLAT_UP_SEG);
+    const slatPoly = slatOuter.slice();
+    for (let i = slatInner.length - 1; i >= 0; i--) slatPoly.push(slatInner[i]);
+    const slatPolyRaw = slatOuterRaw.slice();
+    for (let i = slatInnerRaw.length - 1; i >= 0; i--) slatPolyRaw.push(slatInnerRaw[i]);
+    const slatLeading = slatOuter[SLAT_UP_SEG];
+    const slatUpperTail = slatOuter[0];
+    const slatLowerTail = slatOuter[slatOuter.length - 1];
+    // Spoiler: a rigid plate hinged on the main upper surface at 60% chord.
+    const spBase = mainUpperAt(SPOILER_X, mainUpper);
+    const tangent = mainTangentAt(SPOILER_X, mainUpper);
+    const tangentAngle = Math.atan2(tangent.y, tangent.x);
+    const plateAngle = tangentAngle + state.spoiler * DEG;
+    const spHinge = { x: spBase.x, y: spBase.y + 0.0025 };
+    const spTip = {
+      x: spHinge.x + SPOILER_LEN * Math.cos(plateAngle),
+      y: spHinge.y + SPOILER_LEN * Math.sin(plateAngle)
+    };
+    const spoiler = {
+      hinge: spHinge,
+      tip: spTip,
+      angle: plateAngle,
+      tangentAngle,
+      nx: -Math.sin(plateAngle),
+      ny: Math.cos(plateAngle),
+      active: state.spoiler > 0.5
+    };
+
+    // Slot exit: at the upper trailing gap. The jet is aimed along the
+    // local upper-surface tangent, not straight ahead. Strength/width of
+    // the jet are unchanged; only the geometric origin follows the slat.
+    const slotTan = mainTangentAt(seamX + 0.020, mainUpper);
+    const slotAngle = clamp(Math.atan2(slotTan.y, slotTan.x), 0.14, 0.42);
+    const slot = {
+      x: slatInner[0].x + 0.003,
+      y: slatInner[0].y + 0.002,
+      angle: slotAngle
+    };
+    const slatHinge0 = {
+      x: seamX - 0.012,
+      y: mainUpperAt(seamX - 0.012, mainUpper).y + 0.003
+    };
+    const slatHingeRaw = placeSlat(slatHinge0);
+    const slatHinge = rotateSlat(slatHingeRaw);
+
+    return {
+      main: {
+        upper: mainUpper,
+        lower: mainLower,
+        outerUpper,
+        outerLower,
+        socket,
+        poly: mainActivePoly,
+        socketPoly: mainPoly,
+        closedPoly: closedMainPoly,
+        hinge: { x: HINGE_X, y: hingeY },
+        leadingEdge: { x: LE_X, y: 0 }
+      },
+      flap: {
+        upper: flapUpper,
+        lower: flapLower,
+        poly: flapPoly,
+        hinge: { x: HINGE_X, y: hingeY },
+        angle: state.flap
+      },
+      slat: {
+        upper: slatUpper,
+        lower: slatLower,
+        innerUpper,
+        innerLower,
+        mid: slatMid,
+        base: slatBase,
+        inner: slatInner,
+        outer: slatOuter,
+        poly: slatPoly,
+        offsetX: slatOffsetX,
+        offsetY: slatOffsetY,
+        tilt: slatTilt,
+        hinge: slatHinge,
+        leading: slatLeading,
+        upperTail: slatUpperTail,
+        lowerTail: slatLowerTail,
+        slot,
+        angle: state.slat,
+        draw: {
+          outer: slatOuterRaw,
+          inner: slatInnerRaw,
+          poly: slatPolyRaw,
+          mid: slatMidRaw,
+          anchor: slatAnchorRaw,
+          tilt: slatTilt
+        }
+      },
+      spoiler,
+      slot
+    };
+  }
+
+  function mainUpperAt(x, points) {
+    const pts = points || (geom && geom.main.upper);
+    if (!pts || !pts.length) return { x, y: 0 };
+    if (x <= pts[0].x) return { x: pts[0].x, y: pts[0].y };
+    if (x >= pts[pts.length - 1].x) {
+      const p = pts[pts.length - 1];
+      return { x: p.x, y: p.y };
+    }
+    let lo = 0, hi = pts.length - 1;
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      if (pts[mid].x < x) lo = mid; else hi = mid;
+    }
+    const a = pts[lo], b = pts[hi];
+    const t = (x - a.x) / Math.max(b.x - a.x, 1e-9);
+    return { x, y: lerp(a.y, b.y, t) };
+  }
+  function mainTangentAt(x, points) {
+    const p1 = mainUpperAt(x - 0.006, points);
+    const p2 = mainUpperAt(x + 0.006, points);
+    const dx = p2.x - p1.x, dy = p2.y - p1.y;
+    const len = Math.hypot(dx, dy) || 1;
+    return { x: dx / len, y: dy / len };
+  }
+  function flapUpperAt(x) {
+    const pts = geom.flap.upper;
+    if (!pts.length) return null;
+    if (x < pts[0].x || x > pts[pts.length - 1].x) return null;
+    let lo = 0, hi = pts.length - 1;
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      if (pts[mid].x < x) lo = mid; else hi = mid;
+    }
+    const a = pts[lo], b = pts[hi];
+    const t = (x - a.x) / Math.max(b.x - a.x, 1e-9);
+    return { x, y: lerp(a.y, b.y, t) };
+  }
+  function upperSurfaceAt(x) {
+    if (x <= HINGE_X) return mainUpperAt(x);
+    return flapUpperAt(x) || mainUpperAt(HINGE_X);
+  }
+
+  // Build a visible separated-flow envelope over the aft upper surface. It is
+  // driven by the same separation index used by the status card, so a high
+  // angle of attack and a raised spoiler both grow the region.
+  function buildSepZone() {
+    if (!geom || !aero) return null;
+    const sep = aero.separation;
+    const spoilerUp = state.spoiler > 8;
+    const highAlpha = state.alpha > 11.5;
+    if (!spoilerUp && !highAlpha) return null;
+    if (sep < 0.18) return null;
+
+    const strength = clamp((sep - 0.12) / 0.82, 0, 1);
+    const startFrac = spoilerUp
+      ? 0.60
+      : clamp(0.60 - 0.16 * smoothstep(12, 16, state.alpha), 0.42, 0.60);
+    const x0 = LE_X + CHORD * startFrac;
+    const x1 = TE_X + CHORD * (0.03 + 0.08 * strength);
+    const n = 12;
+    const top = [];
+    const bottom = [];
+    for (let i = 0; i <= n; i++) {
+      const f = i / n;
+      const x = lerp(x0, x1, f);
+      const surf = upperSurfaceAt(Math.min(x, TE_X - 1e-4));
+      const baseY = (surf ? surf.y : mainUpperAt(HINGE_X).y) + 0.003;
+      // Thicker downstream, with a soft leading feather so the region
+      // grows organically instead of appearing as a hard box.
+      const h = (0.010 + 0.115 * strength) * Math.pow(f, 1.35) *
+        (0.66 + 0.34 * smoothstep(0, 0.7, f));
+      bottom.push({ x, y: baseY });
+      top.push({ x, y: baseY + h });
+    }
+    const poly = top.concat(bottom.slice().reverse());
+    const label = {
+      x: lerp(x0, x1, 0.48),
+      y: upperSurfaceAt(Math.min(lerp(x0, x1, 0.48), TE_X - 1e-4)).y +
+        0.026 + 0.055 * strength
+    };
+    return { poly, top, bottom, label, strength, startFrac };
+  }
+
+  /* =========================================================
+     Aerodynamic trend model
+     The force coefficients are a teaching model, not a calibrated
+     wind-tunnel polar. Their purpose is to show the correct trends:
+     flap/slat build lift, spoiler destroys it, drag rises sharply.
+     ========================================================= */
+  function computeAero() {
+    const V = state.airspeed / 100;
+    const slatF = state.slat / 20;
+    const flapF = state.flap / 30;
+    const spF = state.spoiler / 90;
+    const sev = smoothstep(0.004, 1, spF);
+
+    const aoa = state.alpha;
+    const alphaF = clamp((aoa + 4) / 20, 0, 1);
+    const stall = smoothstep(12, 18, aoa);
+    // Thin-airfoil lift slope about a -2° zero-lift angle, with a soft
+    // high-alpha plateau. This keeps the trend readable without pretending
+    // to be a measured CL(alpha) polar.
+    let clBase = 2 * Math.PI * ((aoa + 2) * DEG);
+    clBase *= 1 - 0.22 * stall;
+    clBase = clamp(clBase, -1.15, 1.72);
+    const slatLift = 0.34 * Math.pow(slatF, 0.82);
+    const flapLift = 1.15 * Math.pow(flapF, 0.9) * (1 + 0.14 * slatF);
+    const rawCl = clBase + slatLift + flapLift;
+    const liftFactor = 1 - 0.85 * Math.pow(spF, 1.15);
+    const cl = rawCl * liftFactor;
+
+    const cd0 = 0.020;
+    const cdInduced = 0.027 * cl * cl;
+    const cdFlap = 0.030 * Math.pow(flapF, 1.65) + 0.014 * slatF;
+    const cdSpoiler = 0.95 * Math.pow(spF, 1.5);
+    const cd = cd0 + cdInduced + cdFlap + cdSpoiler;
+
+    const q = V * V;
+    const lift = q * cl;
+    const alphaSep = 0.72 * smoothstep(11.5, 16, aoa);
+    const separation = clamp(
+      0.04 + 0.55 * flapF + 0.95 * spF - 0.58 * slatF +
+      0.12 * Math.max(0, cl - 1.7) + alphaSep,
+      0, 1
+    );
+
+    return {
+      V, aoa, alphaF, stall, slatF, flapF, spF, sev,
+      rawCl, cl: V < 0.012 ? 0 : cl,
+      clRaw: cl,
+      cd, ld: cd > 1e-6 ? cl / cd : 0,
+      q, lift, separation,
+      liftFactor
+    };
+  }
+
+  /* =========================================================
+     Unified velocity field
+     This is the "one flow" shared by streamlines and particles.
+     It combines freestream, airfoil circulation, slat slot jet,
+     flap downwash and a convecting spoiler wake.
+     ========================================================= */
+  function addVortex(cx, cy, strength, x, y, out, core) {
+    const dx = x - cx;
+    const dy = y - cy;
+    const r2 = dx * dx + dy * dy + core * core;
+    const k = strength / (2 * Math.PI * r2);
+    out.u += -k * dy;
+    out.v += k * dx;
+  }
+
+  function addJet(ox, oy, dx, dy, length, halfWidth, strength, x, y, out) {
+    const sx = x - ox;
+    const sy = y - oy;
+    const along = sx * dx + sy * dy;
+    if (along < 0 || along > length) return;
+    const across = -sx * dy + sy * dx;
+    const a = Math.abs(across);
+    if (a > halfWidth) return;
+    const acrossFall = Math.pow(1 - a / halfWidth, 1.35);
+    const alongFall = Math.pow(1 - along / length, 0.28);
+    const w = strength * acrossFall * alongFall;
+    out.u += dx * w;
+    out.v += dy * w;
+  }
+
+  function velocityAt(x, y, out, forLine) {
+    const V = state.airspeed / 100;
+    const Veff = forLine ? Math.max(V, 0.18) : V;
+    const A = aero || { clRaw: 0.68, separation: 0, flapF: 0, sev: 0 };
+    const flapF = A.flapF || 0;
+    const sev = A.sev || 0;
+    const slatF = A.slatF || 0;
+
+    const alphaRad = state.alpha * DEG;
+    out.u = Math.cos(alphaRad) * Veff * 1.08;
+    out.v = Math.sin(alphaRad) * Veff * 1.08;
+
+    if (Veff < 1e-5 && !forLine) return out;
+
+    // Main-element bound circulation: upwash ahead, downwash behind.
+    addVortex(LE_X + CHORD * 0.30, 0.012, 0.34 * A.clRaw * Veff, x, y, out, 0.052);
+    // A second, weaker vortex near the trailing edge smooths the downwash.
+    addVortex(HINGE_X + 0.03, -0.012, 0.13 * A.clRaw * Veff, x, y, out, 0.045);
+
+    // Flap circulation grows with deflection.
+    addVortex(HINGE_X + 0.035, -0.006, 0.20 * flapF * Veff, x, y, out, 0.038);
+
+    // Upper-surface acceleration: this is the visual boundary layer.
+    if (x > LE_X - 0.02 && x < TE_X + 0.06) {
+      const surf = upperSurfaceAt(x);
+      if (surf) {
+        const above = y - surf.y;
+        if (above > 0 && above < 0.10) {
+          const f = Math.exp(-above / 0.035) * smoothstep(LE_X - 0.02, LE_X + 0.08, x);
+          out.u += Veff * 0.25 * f;
+          out.v += Veff * 0.035 * f;
+        } else if (above < 0 && above > -0.09) {
+          const f = Math.exp(above / 0.040);
+          out.u -= Veff * 0.10 * f;
+        }
+      }
+    }
+
+    // Slat slot: a thin, high-energy sheet through the newly opened gap.
+    // It is deliberately narrow and tangent to the upper surface; no large
+    // leading-edge vortex is injected ahead of the nose.
+    if (slatF > 0.01 && geom) {
+      const slot = geom.slot;
+      const dx = Math.cos(slot.angle);
+      const dy = Math.sin(slot.angle);
+      addJet(slot.x - 0.002, slot.y - 0.001, dx, dy, 0.26, 0.018,
+        1.05 * Veff * slatF, x, y, out);
+      // Keep a thin attached sheet hugging the upper surface.
+      const surf = upperSurfaceAt(x);
+      if (surf && x > LE_X && x < HINGE_X) {
+        const above = y - surf.y;
+        if (above > 0 && above < 0.055) {
+          const f = Math.exp(-above / 0.022);
+          out.u += Veff * 0.32 * slatF * f;
+          out.v += Veff * 0.045 * slatF * f;
+        }
+      }
+    }
+
+    // Spoiler wake. It starts DOWNSTREAM of the plate and convects
+    // over the flap, so a raised spoiler visibly contaminates the
+    // flow above the trailing-edge element.
+    if (sev > 0.02 && geom) {
+      const sp = geom.spoiler;
+      const hx = sp.hinge.x;
+      const hy = sp.hinge.y;
+      const dx = x - hx;
+      if (dx > -0.003 && dx < 0.55 && y > hy - 0.07 && y < hy + 0.32) {
+        const env = sev * Veff * Math.exp(-Math.max(dx, 0) / 0.30) *
+          smoothstep(-0.003, 0.018, dx);
+        // Counter-rotating eddy pair: the core of the visible turbulence.
+        addVortex(hx + 0.065, hy + 0.068, 0.62 * sev * Veff, x, y, out, 0.030);
+        addVortex(hx + 0.175, hy + 0.018, -0.44 * sev * Veff, x, y, out, 0.038);
+        const t = fieldTime;
+        const wave = Math.sin((x - hx) * 42 - t * 10.5 + y * 34);
+        const wave2 = Math.cos((x - hx) * 31 - t * 8.0 + y * 23);
+        out.u += env * (0.10 * wave + 0.035 * wave2);
+        out.v += env * (0.22 * wave2 - 0.055 * wave);
+        // A broad, slow wandering component keeps the wake alive
+        // all the way to the flap and beyond.
+        out.u += env * 0.045 * Math.sin(t * 3.1 + (x - hx) * 18);
+        out.v += env * 0.060 * Math.cos(t * 2.6 + (x - hx) * 15 + y * 12);
+      }
+    }
+
+    // Trailing-edge separation adds a low-frequency unsteady wake.
+    if (A.separation > 0.25 && geom) {
+      const sep = A.separation;
+      const dx = x - TE_X;
+      if (dx > -0.02 && dx < 0.45) {
+        const env = sep * Veff * Math.exp(-Math.max(dx, 0) / 0.24);
+        out.u += env * 0.055 * Math.sin(fieldTime * 4.2 + y * 22 - dx * 20);
+        out.v += env * 0.12 * Math.cos(fieldTime * 3.6 + y * 17 - dx * 16);
+      }
+    }
+
+    // Keep finite, even in the far field.
+    if (!Number.isFinite(out.u)) out.u = 0;
+    if (!Number.isFinite(out.v)) out.v = 0;
+    return out;
+  }
+
+  function buildStreamlines() {
+    const lines = [];
+    if (!geom || !view) return lines;
+    const count = cssW < 560 ? 16 : 27;
+    const step = 0.013;
+    const maxSteps = 340;
+    const y0 = view.ymin + 0.045;
+    const y1 = view.ymax - 0.045;
+    for (let i = 0; i < count; i++) {
+      const seedY = lerp(y0, y1, (i + 0.55) / count);
+      let x = view.xmin + 0.018;
+      let y = seedY;
+      const pts = [{ x, y }];
+      let alive = true;
+      for (let s = 0; s < maxSteps; s++) {
+        velocityAt(x, y, tmp, true);
+        let mag = Math.hypot(tmp.u, tmp.v);
+        if (mag < 1e-7) break;
+        const mx = x + (tmp.u / mag) * step * 0.5;
+        const my = y + (tmp.v / mag) * step * 0.5;
+        velocityAt(mx, my, tmp2, true);
+        mag = Math.hypot(tmp2.u, tmp2.v);
+        if (mag < 1e-7) break;
+        const nx = x + (tmp2.u / mag) * step;
+        const ny = y + (tmp2.v / mag) * step;
+
+        if (pointInPoly(nx, ny, geom.main.poly) ||
+            pointInPoly(nx, ny, geom.flap.poly) ||
+            (state.slat >= 0.5 && pointInPoly(nx, ny, geom.slat.poly))) {
+          alive = false;
+        }
+        if (geom.spoiler.active) {
+          const hit = segmentIntersection(x, y, nx, ny,
+            geom.spoiler.hinge.x, geom.spoiler.hinge.y,
+            geom.spoiler.tip.x, geom.spoiler.tip.y);
+          if (hit) alive = false;
+        }
+        if (nx < view.xmin || nx > view.xmax || ny < view.ymin || ny > view.ymax) alive = false;
+        x = nx; y = ny;
+        pts.push({ x, y });
+        if (!alive) break;
+      }
+      if (pts.length > 8) lines.push({ pts, seedY });
+    }
+    return lines;
+  }
+
+  /* =========================================================
+     Particle system + collision
+     Particles are swept as short segments. Testing the swept
+     segment instead of only the final point prevents a fast
+     particle from tunnelling through the thin spoiler plate.
+     ========================================================= */
+  function targetParticleCount() {
+    const area = Math.max(cssW * cssH, 1);
+    return Math.round(clamp(area / 1100, 140, 380));
+  }
+
+  function newParticle() {
+    return {
+      x: 0, y: 0,
+      trail: [],
+      age: 0,
+      life: rand(4, 9),
+      turb: 0,
+      hits: 0,
+      kind: 'air',
+      seed: rand(0, 100),
+      cooldown: 0,
+      speed: 0,
+      wake: 0,
+      zoneSeed: false
+    };
+  }
+
+  function validSpawn(x, y) {
+    if (!geom) return true;
+    return !pointInPoly(x, y, geom.main.poly) &&
+      !pointInPoly(x, y, geom.flap.poly) &&
+      !pointInPoly(x, y, geom.slat.poly);
+  }
+
+  function respawnParticle(p, forceProbe, initial) {
+    if (!geom || !view) {
+      p.x = -0.5;
+      p.y = 0;
+    } else {
+      const sp = geom.spoiler;
+      const slatOn = state.slat > 1;
+      const spoilerOn = state.spoiler > 2;
+      let placed = false;
+      const probe = forceProbe || (spoilerOn && Math.random() < 0.38);
+
+      // For the first frame, distribute particles across the whole
+      // domain instead of releasing one visible "slug" from the inlet.
+      if (initial) {
+        for (let k = 0; k < 14; k++) {
+          const x = rand(view.xmin + 0.03, view.xmax - 0.03);
+          const y = rand(view.ymin + 0.03, view.ymax - 0.03);
+          if (validSpawn(x, y)) {
+            p.x = x; p.y = y; placed = true;
+            p.kind = 'air';
+            break;
+          }
+        }
+      }
+
+      if (!placed && probe) {
+        // Deliberate upstream probes guarantee visible impacts. The
+        // normal freestream can slip around a thin plate, so this is
+        // important for a demonstrator as well as for collision tests.
+        for (let k = 0; k < 8; k++) {
+          const x = sp.hinge.x - rand(0.08, 0.36);
+          const y = sp.hinge.y + rand(0.008, 0.17);
+          if (validSpawn(x, y)) {
+            p.x = x; p.y = y; placed = true;
+            p.kind = 'probe';
+            break;
+          }
+        }
+      } else if (!placed && slatOn && Math.random() < 0.17) {
+        // Seed a few particles directly into the slot jet.
+        for (let k = 0; k < 6; k++) {
+          const x = geom.slot.x - rand(0, 0.025);
+          const y = geom.slot.y + rand(-0.012, 0.028);
+          if (validSpawn(x, y)) {
+            p.x = x; p.y = y; placed = true;
+            p.kind = 'slat';
+            break;
+          }
+        }
+      }
+
+      if (!placed) {
+        let x = view.xmin - rand(0.004, 0.20);
+        let y = Math.random() < 0.78
+          ? rand(-0.23, 0.38)
+          : rand(view.ymin + 0.04, view.ymax - 0.04);
+        for (let k = 0; k < 6; k++) {
+          if (validSpawn(x, y)) break;
+          y = rand(view.ymin + 0.05, view.ymax - 0.05);
+        }
+        p.x = x;
+        p.y = y;
+        p.kind = 'air';
+      }
+    }
+    p.trail.length = 0;
+    p.age = 0;
+    p.life = rand(4.0, 9.0);
+    p.turb = 0;
+    p.hits = 0;
+    p.cooldown = 0;
+    p.speed = 0;
+    p.seed = rand(0, 100);
+    p.wake = 0;
+    p.zoneSeed = false;
+
+    // Seed a share of the particles directly inside the drawn separation
+    // envelope. The freestream can otherwise slip past a thin separated
+    // layer, which would make the zone look empty even though the status
+    // readout says the flow has detached. These particles are released
+    // above the surface and immediately get the rough/turbulent styling.
+    if (sepZone && state.alpha > 11.5 && Math.random() < 0.40) {
+      const z = sepZone;
+      const n = z.top.length;
+      const i = 1 + Math.floor(Math.random() * Math.max(1, n - 2));
+      const f = rand(0.18, 0.88);
+      p.x = z.top[i].x;
+      p.y = lerp(z.bottom[i].y, z.top[i].y, f);
+      p.turb = 0.55 + 0.28 * z.strength;
+      p.kind = 'rough';
+      p.wake = 1;
+      p.zoneSeed = true;
+      p.cooldown = 0.04;
+    }
+  }
+
+  function seedParticles() {
+    const target = targetParticleCount();
+    if (particles.length > target) particles.length = target;
+    while (particles.length < target) {
+      const p = newParticle();
+      respawnParticle(p, false, true);
+      particles.push(p);
+    }
+    for (const p of particles) {
+      if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) respawnParticle(p, false, true);
+    }
+  }
+
+  function polygonHit(ax, ay, bx, by, poly) {
+    let best = null;
+    const center = polyCentroid(poly);
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const a = poly[j];
+      const b = poly[i];
+      const hit = segmentIntersection(ax, ay, bx, by, a.x, a.y, b.x, b.y);
+      if (!hit) continue;
+      if (!best || hit.t < best.t) {
+        let nx = -(b.y - a.y);
+        let ny = b.x - a.x;
+        const len = Math.hypot(nx, ny) || 1;
+        nx /= len; ny /= len;
+        const mx = (a.x + b.x) * 0.5;
+        const my = (a.y + b.y) * 0.5;
+        if ((mx - center.x) * nx + (my - center.y) * ny < 0) {
+          nx = -nx; ny = -ny;
+        }
+        best = { t: hit.t, x: hit.x, y: hit.y, nx, ny, type: 'surface' };
+      }
+    }
+    return best;
+  }
+
+  function spoilerHit(ax, ay, bx, by) {
+    if (!geom || !geom.spoiler.active) return null;
+    const sp = geom.spoiler;
+    const hit = segmentIntersection(ax, ay, bx, by,
+      sp.hinge.x, sp.hinge.y, sp.tip.x, sp.tip.y);
+    if (!hit) return null;
+    let nx = sp.nx;
+    let ny = sp.ny;
+    // Choose the side the particle came from.
+    if ((ax - sp.hinge.x) * nx + (ay - sp.hinge.y) * ny < 0) {
+      nx = -nx; ny = -ny;
+    }
+    return { t: hit.t, x: hit.x, y: hit.y, nx, ny, type: 'spoiler' };
+  }
+
+  function pushSpark(x, y) {
+    if (sparks.length > 34) sparks.shift();
+    sparks.push({
+      x, y,
+      vx: rand(-0.42, 0.42),
+      vy: rand(0.05, 0.55),
+      life: rand(0.20, 0.48),
+      maxLife: 0.48,
+      size: rand(0.7, 1.7)
+    });
+  }
+
+  function impactSpoiler(p, hit, u, v) {
+    p.hits++;
+    collisionTotal++;
+    const sp = geom.spoiler;
+    const vn = u * hit.nx + v * hit.ny;
+    if (vn < 0) {
+      u -= 1.65 * vn * hit.nx;
+      v -= 1.65 * vn * hit.ny;
+    }
+    // Tangential scatter + an outward kick: a broken, non-laminar
+    // ribbon rather than a mirror reflection.
+    const kick = 0.18 + Math.random() * 0.28;
+    u += rand(-0.32, 0.32) + hit.nx * kick;
+    v += rand(-0.22, 0.40) + hit.ny * kick;
+    p.x = hit.x + hit.nx * 0.007;
+    p.y = hit.y + hit.ny * 0.007;
+    p.turb = Math.max(p.turb, 1.15 + Math.random() * 1.25);
+    p.wake = 1;
+    p.kind = 'rough';
+    p.cooldown = 0.055;
+    p.speed = Math.hypot(u, v);
+    pushSpark(hit.x, hit.y);
+    // Keep a short trail behind the rebound for a visible kink.
+    if (p.trail.length > 5) p.trail.splice(0, p.trail.length - 5);
+    return { u, v };
+  }
+
+  function impactSurface(p, hit, u, v) {
+    const vn = u * hit.nx + v * hit.ny;
+    if (vn < 0) {
+      u -= 1.02 * vn * hit.nx;
+      v -= 1.02 * vn * hit.ny;
+    }
+    p.x = hit.x + hit.nx * 0.0045;
+    p.y = hit.y + hit.ny * 0.0045;
+    p.cooldown = 0.045;
+    p.speed = Math.hypot(u, v);
+    return { u, v };
+  }
+
+  function inSpoilerWake(x, y) {
+    if (!geom || state.spoiler < 2) return false;
+    const sp = geom.spoiler;
+    const dx = x - sp.hinge.x;
+    const dy = y - sp.hinge.y;
+    return dx > -0.015 && dx < 0.52 && dy > -0.070 && dy < 0.30;
+  }
+
+  function addParticleTurbulence(p, x, y, u, v) {
+    if (p.turb <= 0.01) return { u, v };
+    const V = state.airspeed / 100;
+    const amp = p.turb * (0.26 + 0.54 * V);
+    const t = fieldTime;
+    u += amp * (
+      Math.sin(p.seed * 7.3 + t * 8.6 + y * 22) * 0.65 +
+      Math.sin(p.seed * 2.1 - t * 5.1 + x * 14) * 0.35
+    );
+    v += amp * (
+      Math.cos(p.seed * 4.7 + t * 7.2 + x * 18) * 0.70 +
+      Math.sin(p.seed * 1.3 - t * 6.0 + y * 16) * 0.30
+    );
+    if (geom && state.spoiler > 2) {
+      const sp = geom.spoiler;
+      const dx = x - (sp.hinge.x + 0.075);
+      const dy = y - (sp.hinge.y + 0.045);
+      const r2 = dx * dx + dy * dy + 0.006;
+      const swirl = 0.16 * p.turb * (0.5 + V) / r2;
+      u += -dy * swirl;
+      v += dx * swirl;
+    }
+    return { u, v };
+  }
+
+  function updateParticles(dt) {
+    if (!geom || !view) return;
+    const d = clamp(dt, 0.0005, 0.035);
+    const V = state.airspeed / 100;
+    const sev = aero ? aero.sev : 0;
+    for (const p of particles) {
+      p.age += d;
+      p.cooldown = Math.max(0, p.cooldown - d);
+      p.turb *= Math.exp(-d * 0.80);
+
+      if (p.age > p.life || p.x < view.xmin - 0.35 || p.x > view.xmax + 0.25 ||
+          p.y < view.ymin - 0.28 || p.y > view.ymax + 0.28) {
+        respawnParticle(p, false);
+        continue;
+      }
+
+      // The wake is a shared region, not a per-particle property:
+      // every particle entering it becomes visibly agitated and is
+      // then carried over the flap. This is the downstream coupling.
+      if (sev > 0.02 && inSpoilerWake(p.x, p.y)) {
+        p.turb = Math.max(p.turb, 0.30 + 0.55 * sev);
+        if (state.spoiler > 25 && p.kind !== 'slat') p.kind = 'rough';
+        p.wake = 1;
+      }
+      // A particle that drifts into the drawn separation envelope is kept
+      // agitated even after the coherent wake has carried it downstream.
+      const inSepZone = !!(sepZone && pointInPoly(p.x, p.y, sepZone.poly));
+      if (inSepZone) {
+        p.turb = Math.max(p.turb, 0.48 + 0.58 * sepZone.strength);
+        if (p.kind !== 'slat') p.kind = 'rough';
+        p.wake = 1;
+        p.zoneSeed = true;
+      } else if (p.zoneSeed) {
+        // Keep the amber turbulence visually confined to the drawn
+        // separation envelope; once a seeded particle exits, it fades
+        // back into the ordinary particle stream instead of painting a
+        // long amber plume across the whole canvas. A particle still in
+        // the spoiler wake stays rough because that wake is a separate,
+        // downstream region.
+        p.zoneSeed = false;
+        if (!(state.spoiler > 2 && inSpoilerWake(p.x, p.y))) {
+          p.kind = 'air';
+          p.turb = Math.min(p.turb, 0.02);
+        }
+      }
+
+      velocityAt(p.x, p.y, tmp, false);
+      let u = tmp.u;
+      let v = tmp.v;
+
+      // Slot particles get a little extra tangential energy so the
+      // reattachment is visually obvious even at low airspeed.
+      if (p.kind === 'slat' && geom.slat.angle > 0.5) {
+        const a = geom.slot.angle;
+        u += Math.cos(a) * 0.22 * Math.max(V, 0.25);
+        v += Math.sin(a) * 0.22 * Math.max(V, 0.25);
+      }
+
+      const turb = addParticleTurbulence(p, p.x, p.y, u, v);
+      u = turb.u; v = turb.v;
+
+      if (V < 0.002 && p.turb < 0.02) {
+        p.trail.push({ x: p.x, y: p.y });
+        if (p.trail.length > 14) p.trail.shift();
+        p.speed = 0;
+        continue;
+      }
+
+      // RK2 midpoint integration keeps the path smooth at 60 fps.
+      const mx = p.x + u * d * 0.5;
+      const my = p.y + v * d * 0.5;
+      velocityAt(mx, my, tmp2, false);
+      let u2 = tmp2.u;
+      let v2 = tmp2.v;
+      if (p.turb > 0.01) {
+        const tt = addParticleTurbulence(p, mx, my, u2, v2);
+        u2 = tt.u; v2 = tt.v;
+      }
+      let nx = p.x + u2 * d;
+      let ny = p.y + v2 * d;
+
+      if (p.cooldown <= 0) {
+        let hit = null;
+        const hMain = polygonHit(p.x, p.y, nx, ny, geom.main.poly);
+        if (hMain) hit = hMain;
+        const hSlat = polygonHit(p.x, p.y, nx, ny, geom.slat.poly);
+        if (hSlat && (!hit || hSlat.t < hit.t)) hit = hSlat;
+        const hFlap = polygonHit(p.x, p.y, nx, ny, geom.flap.poly);
+        if (hFlap && (!hit || hFlap.t < hit.t)) hit = hFlap;
+        const hSpoiler = spoilerHit(p.x, p.y, nx, ny);
+        if (hSpoiler && (!hit || hSpoiler.t < hit.t)) hit = hSpoiler;
+
+        if (hit) {
+          if (hit.type === 'spoiler') {
+            const bounced = impactSpoiler(p, hit, u2, v2);
+            u2 = bounced.u; v2 = bounced.v;
+          } else {
+            const slid = impactSurface(p, hit, u2, v2);
+            u2 = slid.u; v2 = slid.v;
+          }
+          nx = p.x;
+          ny = p.y;
+        }
+      }
+
+      // Safety net: if the midpoint ever lands inside a polygon,
+      // respawn instead of letting a particle become trapped.
+      if (pointInPoly(nx, ny, geom.main.poly) ||
+          pointInPoly(nx, ny, geom.flap.poly) ||
+          pointInPoly(nx, ny, geom.slat.poly)) {
+        respawnParticle(p, false);
+        continue;
+      }
+
+      p.x = nx;
+      p.y = ny;
+      p.speed = Math.hypot(u2, v2);
+      p.trail.push({ x: p.x, y: p.y });
+      const maxTrail = p.turb > 0.05 ? 20 : 16;
+      while (p.trail.length > maxTrail) p.trail.shift();
+    }
+
+    // Sparks are purely visual collision evidence.
+    for (let i = sparks.length - 1; i >= 0; i--) {
+      const s = sparks[i];
+      s.life -= d;
+      s.x += s.vx * d;
+      s.y += s.vy * d;
+      s.vy -= 0.5 * d;
+      if (s.life <= 0) sparks.splice(i, 1);
+    }
+  }
+
+  /* =========================================================
+     Rendering
+     ========================================================= */
+  function X(x) {
+    return (x - view.xmin) / (view.xmax - view.xmin) * cssW;
+  }
+  function Y(y) {
+    return (view.ymax - y) / (view.ymax - view.ymin) * cssH;
+  }
+  function WX(x) {
+    return view.xmin + (x / cssW) * (view.xmax - view.xmin);
+  }
+  function WY(y) {
+    return view.ymax - (y / cssH) * (view.ymax - view.ymin);
+  }
+
+  function resizeCanvas() {
+    const rect = el.stage.getBoundingClientRect();
+    cssW = Math.max(1, rect.width);
+    cssH = Math.max(1, rect.height);
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    el.canvas.width = Math.max(1, Math.round(cssW * dpr));
+    el.canvas.height = Math.max(1, Math.round(cssH * dpr));
+    el.canvas.style.width = '100%';
+    el.canvas.style.height = '100%';
+    bgCanvas.width = el.canvas.width;
+    bgCanvas.height = el.canvas.height;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    bgCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const aspect = cssW / cssH;
+    const worldH = WORLD_W / Math.max(aspect, 0.5);
+    view = {
+      xmin: WORLD_CX - WORLD_W / 2,
+      xmax: WORLD_CX + WORLD_W / 2,
+      ymin: WORLD_CY - worldH / 2,
+      ymax: WORLD_CY + worldH / 2
+    };
+    particles.length = 0;
+    if (geom) seedParticles();
+    dirty = true;
+    bgDirty = true;
+  }
+
+  function scheduleResize() {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      resizeCanvas();
+      if (geom) {
+        rebuild();
+      }
+    }, 80);
+  }
+
+  function drawText(text, x, y, color, size, align, weight) {
+    ctx.save();
+    ctx.font = `${weight || 500} ${size}px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace`;
+    ctx.fillStyle = color;
+    ctx.textAlign = align || 'left';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,.9)';
+    ctx.shadowBlur = 4;
+    ctx.fillText(text, x, y);
+    ctx.restore();
+  }
+
+  function drawLeader(x1, y1, x2, y2, color, alpha) {
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = alpha;
+    ctx.lineWidth = 0.8;
+    ctx.setLineDash([2, 3]);
+    ctx.beginPath();
+    ctx.moveTo(X(x1), Y(y1));
+    ctx.lineTo(X(x2), Y(y2));
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.arc(X(x1), Y(y1), 1.7, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawStreamlines(g) {
+    if (!streamlines.length) return;
+    const V = state.airspeed / 100;
+    const alpha = V < 0.02 ? 0.12 : 0.31;
+    g.save();
+    g.lineCap = 'round';
+    g.lineJoin = 'round';
+    for (let i = 0; i < streamlines.length; i++) {
+      const line = streamlines[i];
+      const pts = line.pts;
+      if (pts.length < 3) continue;
+      g.beginPath();
+      g.moveTo(X(pts[0].x), Y(pts[0].y));
+      for (let j = 1; j < pts.length; j++) {
+        g.lineTo(X(pts[j].x), Y(pts[j].y));
+      }
+      const grad = g.createLinearGradient(X(pts[0].x), 0, X(pts[pts.length - 1].x), 0);
+      grad.addColorStop(0, `rgba(112,203,255,${alpha * 0.30})`);
+      grad.addColorStop(0.5, `rgba(138,235,255,${alpha})`);
+      grad.addColorStop(1, `rgba(93,211,218,${alpha * 0.44})`);
+      g.strokeStyle = grad;
+      g.lineWidth = 0.9;
+      g.stroke();
+
+      // Small direction chevrons make the streamlines feel like flow.
+      const stride = Math.max(18, Math.floor(pts.length / 4));
+      for (let j = stride; j < pts.length - 2; j += stride) {
+        const a = pts[j];
+        const b = pts[Math.min(j + 3, pts.length - 1)];
+        const ang = Math.atan2(Y(b.y) - Y(a.y), X(b.x) - X(a.x));
+        const size = 3.2;
+        g.save();
+        g.translate(X(a.x), Y(a.y));
+        g.rotate(ang);
+        g.beginPath();
+        g.moveTo(0, 0);
+        g.lineTo(-size, -size * 0.55);
+        g.lineTo(-size * 0.5, 0);
+        g.lineTo(-size, size * 0.55);
+        g.closePath();
+        g.fillStyle = `rgba(128,225,255,${alpha * 0.9})`;
+        g.fill();
+        g.restore();
+      }
+    }
+    g.restore();
+  }
+
+  function drawRunway(g) {
+    if (!view || view.ymin > -0.50) return;
+    const y = -0.64;
+    if (y < view.ymin) return;
+    g.save();
+    g.strokeStyle = 'rgba(170,215,245,.14)';
+    g.lineWidth = 1;
+    g.setLineDash([7, 8]);
+    g.beginPath();
+    g.moveTo(X(view.xmin), Y(y));
+    g.lineTo(X(view.xmax), Y(y));
+    g.stroke();
+    g.setLineDash([]);
+    g.font = '400 6.5px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace';
+    g.fillStyle = 'rgba(170,215,245,.26)';
+    g.textAlign = 'left';
+    g.textBaseline = 'middle';
+    g.fillText('RUNWAY', X(view.xmin + 0.10), Y(y) - 7);
+    g.restore();
+  }
+
+  function renderBackground() {
+    if (!view) return;
+    bgCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    bgCtx.clearRect(0, 0, cssW, cssH);
+
+    const bg = bgCtx.createLinearGradient(0, 0, 0, cssH);
+    bg.addColorStop(0, '#071722');
+    bg.addColorStop(0.42, '#06131d');
+    bg.addColorStop(1, '#03080e');
+    bgCtx.fillStyle = bg;
+    bgCtx.fillRect(0, 0, cssW, cssH);
+
+    const gx = X(LE_X + 0.35);
+    const gy = Y(0.02);
+    const glow = bgCtx.createRadialGradient(gx, gy, 8, gx, gy, cssW * 0.70);
+    glow.addColorStop(0, 'rgba(18,102,128,.23)');
+    glow.addColorStop(0.45, 'rgba(8,47,66,.12)');
+    glow.addColorStop(1, 'rgba(3,8,14,0)');
+    bgCtx.fillStyle = glow;
+    bgCtx.fillRect(0, 0, cssW, cssH);
+
+    // A soft horizon band keeps the stage from reading as a flat card.
+    const band = bgCtx.createLinearGradient(0, cssH * 0.56, 0, cssH);
+    band.addColorStop(0, 'rgba(15,56,76,0)');
+    band.addColorStop(1, 'rgba(8,25,38,.34)');
+    bgCtx.fillStyle = band;
+    bgCtx.fillRect(0, cssH * 0.42, cssW, cssH * 0.58);
+
+    if (aero && aero.V > 0.02) {
+      // Suction above the nose and pressure below the wing.
+      const cl = clamp(aero.clRaw, 0, 2.6);
+      const suction = bgCtx.createRadialGradient(
+        X(LE_X + 0.26), Y(0.09), 2,
+        X(LE_X + 0.26), Y(0.09), cssW * 0.36
+      );
+      suction.addColorStop(0, `rgba(64,225,255,${0.085 + cl * 0.018})`);
+      suction.addColorStop(0.55, `rgba(21,120,144,${0.035 + cl * 0.010})`);
+      suction.addColorStop(1, 'rgba(5,25,35,0)');
+      bgCtx.fillStyle = suction;
+      bgCtx.fillRect(0, 0, cssW, cssH);
+
+      const pressure = bgCtx.createRadialGradient(
+        X(LE_X + 0.45), Y(-0.07), 2,
+        X(LE_X + 0.45), Y(-0.07), cssW * 0.30
+      );
+      pressure.addColorStop(0, 'rgba(255,162,72,.050)');
+      pressure.addColorStop(1, 'rgba(255,150,60,0)');
+      bgCtx.fillStyle = pressure;
+      bgCtx.fillRect(0, 0, cssW, cssH);
+    }
+
+    drawRunway(bgCtx);
+    drawStreamlines(bgCtx);
+    bgCtx.setTransform(1, 0, 0, 1, 0, 0);
+    bgCanvas._dirty = false;
+  }
+
+  function drawParticles() {
+    if (!particles.length) return;
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // One screen-space gradient per frame makes the yellow wake fade as it
+    // travels aft; this costs one gradient instead of one per particle.
+    let wakeGrad = null;
+    let wakeX0 = LE_X + CHORD * 0.50;
+    let wakeX1 = Math.min(view.xmax - 0.02, wakeX0 + 0.52);
+    if (geom && geom.spoiler && geom.spoiler.hinge) {
+      wakeX0 = geom.spoiler.hinge.x - 0.02;
+      wakeX1 = Math.min(view.xmax - 0.02, wakeX0 + 0.52);
+    }
+    if (wakeX1 > wakeX0 + 0.02) {
+      wakeGrad = ctx.createLinearGradient(X(wakeX0), 0, X(wakeX1), 0);
+      wakeGrad.addColorStop(0, 'rgba(255,196,112,1)');
+      wakeGrad.addColorStop(0.48, 'rgba(255,174,92,.72)');
+      wakeGrad.addColorStop(1, 'rgba(255,150,80,0)');
+    }
+
+    for (const p of particles) {
+      const rough = p.turb > 0.09 || p.kind === 'rough';
+      const slat = p.kind === 'slat';
+      const trail = p.trail;
+      if (trail.length < 2) continue;
+      const V = state.airspeed / 100;
+      const baseA = rough ? 0.40 : slat ? 0.42 : 0.30;
+      const alpha = baseA * (0.58 + 0.42 * clamp(V, 0, 1));
+      const color = rough
+        ? (aero && aero.sev > 0.55 ? '255,143,70' : '255,191,99')
+        : slat ? '86,236,255' : '170,232,255';
+      const fade = rough
+        ? clamp(1 - (p.x - wakeX0) / Math.max(wakeX1 - wakeX0, 1e-6), 0, 1)
+        : 1;
+
+      ctx.beginPath();
+      ctx.moveTo(X(trail[0].x), Y(trail[0].y));
+      for (let i = 1; i < trail.length; i++) {
+        ctx.lineTo(X(trail[i].x), Y(trail[i].y));
+      }
+      if (rough && wakeGrad) {
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = wakeGrad;
+        ctx.lineWidth = 5.0;
+        ctx.stroke();
+        ctx.lineWidth = 1.35;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      } else {
+        if (rough) {
+          ctx.strokeStyle = `rgba(${color},${alpha * 0.22})`;
+          ctx.lineWidth = 5.0;
+          ctx.stroke();
+        }
+        ctx.strokeStyle = `rgba(${color},${alpha})`;
+        ctx.lineWidth = rough ? 1.35 : slat ? 1.05 : 0.8;
+        ctx.stroke();
+      }
+
+      const head = trail[trail.length - 1];
+      const r = rough ? 1.8 + Math.min(0.7, p.turb * 0.22) : slat ? 1.35 : 1.05;
+      ctx.beginPath();
+      ctx.arc(X(head.x), Y(head.y), r, 0, Math.PI * 2);
+      if (rough) {
+        ctx.globalAlpha = 0.35 + 0.65 * fade;
+        ctx.fillStyle = `rgba(255,205,128,.95)`;
+      } else {
+        ctx.fillStyle = `rgba(225,250,255,.92)`;
+      }
+      ctx.shadowColor = rough ? 'rgba(255,155,65,.85)' : 'rgba(110,230,255,.65)';
+      ctx.shadowBlur = rough ? 7 : 4;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
+    }
+
+    // Slot-jet shimmer: a few short cyan streaks at the gap.
+    if (state.slat > 0.5 && geom) {
+      const slot = geom.slot;
+      const count = 4;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(90,240,255,.55)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < count; i++) {
+        const phase = (fieldTime * 1.8 + i * 0.22) % 1;
+        const x = slot.x + Math.cos(slot.angle) * (0.02 + phase * 0.24);
+        const y = slot.y + Math.sin(slot.angle) * (0.02 + phase * 0.24) + 0.008;
+        const surf = upperSurfaceAt(x);
+        if (!surf) continue;
+        ctx.globalAlpha = 0.55 * (1 - phase);
+        ctx.beginPath();
+        ctx.moveTo(X(x), Y(y + 0.012));
+        ctx.quadraticCurveTo(X(x + 0.04), Y(surf.y + 0.035), X(x + 0.075), Y(surf.y + 0.045));
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  function drawWakeFx() {
+    if (!geom || state.spoiler < 0.6) return;
+    const sp = geom.spoiler;
+    const sev = aero ? aero.sev : state.spoiler / 90;
+    const cx = X(sp.hinge.x + 0.11);
+    const cy = Y(sp.hinge.y + 0.085);
+    const rx = Math.max(26, (0.25 / (view.xmax - view.xmin)) * cssW);
+    const ry = Math.max(15, (0.13 / (view.ymax - view.ymin)) * cssH);
+    const t = fieldTime;
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const glow = ctx.createRadialGradient(cx, cy, 1, cx, cy, rx);
+    glow.addColorStop(0, `rgba(255,154,63,${0.11 + sev * 0.12})`);
+    glow.addColorStop(0.45, `rgba(255,122,50,${0.045 + sev * 0.07})`);
+    glow.addColorStop(1, 'rgba(255,100,30,0)');
+    ctx.fillStyle = glow;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(1, ry / rx);
+    ctx.beginPath();
+    ctx.arc(0, 0, rx, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Coherent eddy loops; they animate slowly so the wake feels alive.
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 4; i++) {
+      const rr = (0.028 + i * 0.022) * cssW / 0.65;
+      const ang = t * (0.7 + i * 0.16) + i * 1.7;
+      ctx.beginPath();
+      ctx.strokeStyle = `rgba(255,179,91,${0.14 + sev * 0.16})`;
+      ctx.arc(cx + Math.cos(ang) * rr * 0.6, cy + Math.sin(ang) * rr * 0.25, rr * 0.42, 0.2, 5.5);
+      ctx.stroke();
+    }
+
+    // Shear filaments shed downstream toward the flap.
+    for (let i = 0; i < 3; i++) {
+      const yy = cy + (i - 1) * ry * 0.48;
+      ctx.beginPath();
+      ctx.strokeStyle = `rgba(255,199,122,${0.10 + sev * 0.12})`;
+      ctx.lineWidth = 0.8;
+      for (let k = 0; k <= 14; k++) {
+        const f = k / 14;
+        const xx = cx + f * rx * 1.35;
+        const yyy = yy + Math.sin(f * 10 + t * 3.4 + i) * (2 + sev * 4) * f;
+        if (k === 0) ctx.moveTo(xx, yyy); else ctx.lineTo(xx, yyy);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function pathPoly(poly) {
+    ctx.beginPath();
+    ctx.moveTo(X(poly[0].x), Y(poly[0].y));
+    for (let i = 1; i < poly.length; i++) ctx.lineTo(X(poly[i].x), Y(poly[i].y));
+    ctx.closePath();
+  }
+
+  // A compact, illustrative Cp -> colour ramp. Negative Cp (suction) runs
+  // deep blue -> cyan; positive Cp (pressure) runs amber -> red.
+  const CP_RAMP = [
+    [-2.30, [16, 42, 125]],
+    [-1.45, [22, 83, 176]],
+    [-0.75, [30, 139, 205]],
+    [-0.20, [42, 196, 191]],
+    [0.18, [157, 207, 142]],
+    [0.46, [238, 184, 78]],
+    [0.78, [235, 117, 55]],
+    [1.18, [205, 45, 50]]
+  ];
+
+  function pressureColor(cp) {
+    const x = clamp(cp, CP_RAMP[0][0], CP_RAMP[CP_RAMP.length - 1][0]);
+    for (let i = 1; i < CP_RAMP.length; i++) {
+      const a = CP_RAMP[i - 1], b = CP_RAMP[i];
+      if (x <= b[0]) {
+        const f = (x - a[0]) / Math.max(1e-6, b[0] - a[0]);
+        return [
+          Math.round(lerp(a[1][0], b[1][0], f)),
+          Math.round(lerp(a[1][1], b[1][1], f)),
+          Math.round(lerp(a[1][2], b[1][2], f))
+        ];
+      }
+    }
+    return CP_RAMP[CP_RAMP.length - 1][1];
+  }
+
+  function cpUpperAt(x) {
+    const t = clamp((x - LE_X) / CHORD, 0, 1);
+    const aF = aero ? aero.alphaF : 0.45;
+    const fF = aero ? aero.flapF : 0;
+    const sF = aero ? aero.spF : 0;
+    let cp = -0.92
+      - 1.15 * (0.55 + 0.45 * aF) * Math.exp(-t * 5.2)
+      - 0.58 * (1 - 0.35 * t)
+      - 0.30 * fF * smoothstep(0.42, 1.0, t)
+      + 2.20 * sF * smoothstep(0.30, 0.70, t);
+    if (aero && aero.separation > 0.25) {
+      cp += 0.38 * aero.separation * smoothstep(0.42, 0.9, t);
+    }
+    return clamp(cp, -2.3, 1.2);
+  }
+
+  function cpLowerAt(x) {
+    const t = clamp((x - LE_X) / CHORD, 0, 1);
+    const aF = aero ? aero.alphaF : 0.45;
+    const fF = aero ? aero.flapF : 0;
+    const sF = aero ? aero.spF : 0;
+    let cp = 0.42
+      + 0.22 * aF * (1 - 0.45 * t)
+      + 0.34 * fF * smoothstep(0.18, 0.9, t)
+      + 0.58 * sF * smoothstep(0.3, 0.82, t)
+      - 0.18 * Math.exp(-t * 5.2);
+    return clamp(cp, -1.0, 1.18);
+  }
+
+  function cpFlapAt(x, upper) {
+    const t = clamp((x - HINGE_X) / Math.max(TE_X - HINGE_X, 1e-6), 0, 1);
+    const fF = aero ? aero.flapF : 0;
+    const sF = aero ? aero.spF : 0;
+    const base = upper
+      ? -0.48 - 0.48 * fF - 0.55 * Math.exp(-t * 3.5) + 0.85 * sF * smoothstep(0.0, 0.45, t)
+      : 0.44 + 0.30 * fF * smoothstep(0, 0.85, t) + 0.52 * sF;
+    return clamp(base, -1.8, 1.1);
+  }
+
+  // ---- Thin pressure-painted skin edges -----------------------------
+  // The section interior is intentionally NOT filled any more: only the
+  // outline is painted, so the streamlines behind the wing stay readable.
+  // The outline colour is sampled from the live Cp functions on every frame,
+  // so suction runs deep blue -> cyan and pressure runs amber -> red as the
+  // attitude, flap and spoiler change. The contour is stroked in short
+  // chunks, each with its own tiny gradient, which keeps the colour smooth
+  // along the NACA curve without any shadowBlur (that blur is what used to
+  // smear the thin profile into a blob).
+  const CP_EDGE_CHUNK = 5;
+
+  function strokeCpLoop(loop, width) {
+    if (!loop || loop.length < 2) return;
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.shadowBlur = 0;
+    for (let s = 0; s < loop.length - 1; s += CP_EDGE_CHUNK) {
+      const end = Math.min(s + CP_EDGE_CHUNK, loop.length - 1);
+      const a = loop[s];
+      const b = loop[end];
+      const ca = pressureColor(a.cp);
+      const cb = pressureColor(b.cp);
+      const aa = 0.62 + 0.34 * clamp(Math.abs(a.cp) / 2.1, 0, 1);
+      const ab = 0.62 + 0.34 * clamp(Math.abs(b.cp) / 2.1, 0, 1);
+      const grad = ctx.createLinearGradient(X(a.x), Y(a.y), X(b.x), Y(b.y));
+      grad.addColorStop(0, `rgba(${ca[0]},${ca[1]},${ca[2]},${aa.toFixed(3)})`);
+      grad.addColorStop(1, `rgba(${cb[0]},${cb[1]},${cb[2]},${ab.toFixed(3)})`);
+      ctx.beginPath();
+      ctx.moveTo(X(a.x), Y(a.y));
+      for (let i = s + 1; i <= end; i++) ctx.lineTo(X(loop[i].x), Y(loop[i].y));
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = width;
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // One element == one closed upper/lower contour: upper LE->TE, then lower
+  // TE->LE. Each element is stroked as its own loop, so no stroke can ever
+  // bridge the hinge and drag a straight line across two components.
+  function strokeCpContour(upper, lower, cpUp, cpLo, width) {
+    if (!upper || !lower || upper.length < 2 || lower.length < 2) return;
+    const loop = [];
+    for (let i = 0; i < upper.length; i++) {
+      loop.push({ x: upper[i].x, y: upper[i].y, cp: cpUp(upper[i].x) });
+    }
+    for (let i = lower.length - 1; i >= 0; i--) {
+      loop.push({ x: lower[i].x, y: lower[i].y, cp: cpLo(lower[i].x) });
+    }
+    loop.push({ x: loop[0].x, y: loop[0].y, cp: loop[0].cp });
+    strokeCpLoop(loop, width);
+  }
+
+  function drawMainWing() {
+    const main = geom.main;
+    const socketOpen = false;
+
+    // U-shaped socket cavity: dark liner, cool inner rim and a soft depth
+    // gradient. At 0° the thick slat cap sits in this cavity and covers it.
+    if (socketOpen && main.socket) {
+      const sk = main.socket;
+      const rr = Math.max(4, (sk.r / Math.max(view.xmax - view.xmin, 1e-6)) * cssW);
+      const gx = X(sk.cx), gy = Y(sk.cy);
+      ctx.beginPath();
+      ctx.moveTo(X(sk.points[0].x), Y(sk.points[0].y));
+      for (let i = 1; i < sk.points.length; i++) {
+        ctx.lineTo(X(sk.points[i].x), Y(sk.points[i].y));
+      }
+      ctx.closePath();
+      const cavity = ctx.createRadialGradient(gx, gy, 1, gx, gy, rr * 1.15);
+      cavity.addColorStop(0, 'rgba(1,7,11,.98)');
+      cavity.addColorStop(0.72, 'rgba(3,13,20,.96)');
+      cavity.addColorStop(1, 'rgba(9,28,38,.90)');
+      ctx.fillStyle = cavity;
+      ctx.fill();
+
+      if (socketOpen) {
+        ctx.strokeStyle = 'rgba(88,218,238,.74)';
+        ctx.lineWidth = 1.45;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(gx, gy, rr * 0.72, sk.half * -1, sk.half);
+        ctx.strokeStyle = 'rgba(112,225,235,.22)';
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+
+        // Bright mouth lips make the C-shaped U-groove read as an actual
+        // mechanical socket rather than a dark smudge behind the slat.
+        for (const lip of [sk.upperLip, sk.lowerLip]) {
+          const dx = lip.x - sk.cx;
+          const dy = lip.y - sk.cy;
+          const len = Math.hypot(dx, dy) || 1;
+          ctx.beginPath();
+          ctx.moveTo(X(lip.x), Y(lip.y));
+          ctx.lineTo(X(lip.x + dx / len * 0.0045), Y(lip.y + dy / len * 0.0045));
+          ctx.strokeStyle = 'rgba(122,238,247,.62)';
+          ctx.lineWidth = 1.3;
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(X(lip.x), Y(lip.y), 1.15, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(160,250,255,.68)';
+          ctx.fill();
+        }
+      }
+    }
+
+    // The main element keeps its complete NACA skin at every slat angle.
+    // Only the skin is stroked — thin, sharp and pressure-painted — and the
+    // contour closes on its own hinge face, so the interior stays clear and
+    // nothing is drawn from here toward the flap.
+    strokeCpContour(main.upper, main.lower, cpUpperAt, cpLowerAt, 0.70);
+  }
+
+  // The U-socket lips sit in front of the slat tail. Repainting the two
+  // mouth points after the slat keeps the slot mouth legible even when the
+  // blunt tail still fills most of the cavity at small deflections.
+  function drawSocketMouth() {
+    if (!geom || state.slat < 0.5 || !geom.main.socket) return;
+    const sk = geom.main.socket;
+    ctx.save();
+    for (const lip of [sk.upperLip, sk.lowerLip]) {
+      const dx = lip.x - sk.cx;
+      const dy = lip.y - sk.cy;
+      const len = Math.hypot(dx, dy) || 1;
+      ctx.beginPath();
+      ctx.arc(X(lip.x), Y(lip.y), 1.15, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(160,250,255,.62)';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(X(lip.x), Y(lip.y));
+      ctx.lineTo(X(lip.x + dx / len * 0.0045), Y(lip.y + dy / len * 0.0045));
+      ctx.strokeStyle = 'rgba(122,238,247,.52)';
+      ctx.lineWidth = 1.1;
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawSlat() {
+    const slat = geom.slat;
+    const draw = slat.draw;
+    const closed = state.slat < 0.35;
+    const outer = draw.outer;
+    const inner = draw.inner;
+    const split = slat.upper.length - 1;
+    const upper = outer.slice(0, split + 1);
+    const lower = outer.slice(split);
+    const innerUpper = inner.slice(0, split + 1);
+    const innerLower = inner.slice(split);
+    const upperTail = outer[0];
+    const lowerTail = outer[outer.length - 1];
+
+    const strokeLine = (pts, color, width, shadow) => {
+      if (!pts || pts.length < 2) return;
+      ctx.beginPath();
+      ctx.moveTo(X(pts[0].x), Y(pts[0].y));
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(X(pts[i].x), Y(pts[i].y));
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      if (shadow) {
+        ctx.shadowColor = shadow;
+        ctx.shadowBlur = 8;
+      }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    };
+
+    // The rigid body was translated first, then rotated about a point in
+    // its rear. Canvas rotation is applied around that translated anchor;
+    // no scale or geometry rebuild is involved, so the section is rigid.
+    const ax = X(draw.anchor.x), ay = Y(draw.anchor.y);
+    ctx.save();
+    ctx.translate(ax, ay);
+    ctx.rotate(-draw.tilt); // screen Y is down; +tilt is nose-down
+    ctx.translate(-ax, -ay);
+
+    // Rigid body: always the same C shell. At 0° its outer skin lies on the
+    // fixed main nose, so there is no crack; as it translates the same cavity
+    // naturally opens into the slot. The slat stays transparent as well: its
+    // outer skin is one thin C-curve painted from the local Cp field, and its
+    // concave back is a faint seam. It is a path group of its own and never
+    // borrows the main outline, so no line can bridge the two components.
+    const outerLoop = [];
+    for (let i = 0; i < outer.length; i++) {
+      outerLoop.push({
+        x: outer[i].x,
+        y: outer[i].y,
+        cp: i <= split ? cpUpperAt(outer[i].x) : cpLowerAt(outer[i].x)
+      });
+    }
+    strokeCpLoop(outerLoop, closed ? 0.55 : 0.62);
+
+    // The concave back is only a seam while stowed; deployed it is the
+    // visible rear rim of the crescent.
+    strokeLine(innerUpper, closed ? 'rgba(137,226,232,.20)' : 'rgba(139,249,255,.50)',
+      closed ? 0.45 : 0.55);
+    strokeLine(innerLower, closed ? 'rgba(137,226,232,.18)' : 'rgba(104,224,255,.40)',
+      closed ? 0.45 : 0.50);
+
+    if (!closed && draw.mid) {
+      strokeLine(draw.mid, 'rgba(208,255,250,.18)', 0.6);
+    }
+
+    // Thin tips that ride in the main leading-edge groove.
+    if (upperTail && lowerTail) {
+      const tipR = closed ? 1.0 : 1.35;
+      for (const tp of [upperTail, lowerTail]) {
+        ctx.beginPath();
+        ctx.arc(X(tp.x), Y(tp.y), tipR, 0, Math.PI * 2);
+        ctx.fillStyle = closed ? 'rgba(150,225,230,.40)' : 'rgba(150,255,245,.75)';
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+
+    // Two-link mechanism. The pins follow the translated and slightly
+    // rotated slat pivot; the section itself remains rigid.
+    if (state.slat > 2.0) {
+      const mainPivot = { x: LE_X + 0.105, y: -0.012 };
+      const slatPivot = slat.hinge;
+      const elbow = {
+        x: lerp(mainPivot.x, slatPivot.x, 0.56) + 0.006,
+        y: lerp(mainPivot.y, slatPivot.y, 0.56) + 0.010
+      };
+      const a = smoothstep(2, 8, state.slat);
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = `rgba(174,219,226,${0.16 + a * 0.20})`;
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.moveTo(X(mainPivot.x), Y(mainPivot.y));
+      ctx.lineTo(X(elbow.x), Y(elbow.y));
+      ctx.lineTo(X(slatPivot.x), Y(slatPivot.y));
+      ctx.stroke();
+      for (const pp of [mainPivot, elbow, slatPivot]) {
+        ctx.beginPath();
+        ctx.arc(X(pp.x), Y(pp.y), 2.0, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(184,235,238,${0.30 + a * 0.35})`;
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(5,13,20,.85)';
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
+  function drawFlap() {
+    const flap = geom.flap;
+    // Independent closed contour: the flap is painted from its own local Cp
+    // ramp and is never joined to the main element. Thin and sharp — no fill,
+    // no shadow blur, so the NACA curve stays crisp.
+    strokeCpContour(
+      flap.upper,
+      flap.lower,
+      x => cpFlapAt(x, true),
+      x => cpFlapAt(x, false),
+      0.60
+    );
+
+    // Hinge pin and a thin gap line.
+    const h = flap.hinge;
+    ctx.beginPath();
+    ctx.arc(X(h.x), Y(h.y), 1.9, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(190,225,255,.80)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(5,13,20,.85)';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+
+    if (state.flap > 1.5) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(110,168,255,.22)';
+      ctx.lineWidth = 0.8;
+      ctx.setLineDash([3, 4]);
+      ctx.beginPath();
+      ctx.moveTo(X(h.x), Y(h.y));
+      ctx.lineTo(X(h.x + FLAP_CHORD * Math.cos(-state.flap * DEG)), Y(h.y + FLAP_CHORD * Math.sin(-state.flap * DEG)));
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  function drawSpoiler() {
+    const sp = geom.spoiler;
+    const active = state.spoiler > 0.5;
+    ctx.save();
+    ctx.lineCap = 'round';
+    if (active) {
+      const grad = ctx.createLinearGradient(X(sp.hinge.x), Y(sp.hinge.y), X(sp.tip.x), Y(sp.tip.y));
+      grad.addColorStop(0, 'rgba(255,214,130,.98)');
+      grad.addColorStop(1, 'rgba(255,126,46,.94)');
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = Math.max(3.2, cssW * 0.0048);
+      ctx.shadowColor = 'rgba(255,151,55,.5)';
+      ctx.shadowBlur = 14;
+      ctx.beginPath();
+      ctx.moveTo(X(sp.hinge.x), Y(sp.hinge.y));
+      ctx.lineTo(X(sp.tip.x), Y(sp.tip.y));
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    } else {
+      ctx.strokeStyle = 'rgba(255,184,77,.30)';
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.moveTo(X(sp.hinge.x), Y(sp.hinge.y));
+      ctx.lineTo(X(sp.tip.x), Y(sp.tip.y));
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.arc(X(sp.hinge.x), Y(sp.hinge.y), 2.8, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,212,126,.96)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(7,14,20,.9)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Angle arc from the local surface tangent to the raised plate.
+    if (active) {
+      const r = Math.min(0.055, SPOILER_LEN * 0.55);
+      const a0 = -sp.tangentAngle;
+      const a1 = -sp.angle;
+      ctx.beginPath();
+      ctx.arc(X(sp.hinge.x), Y(sp.hinge.y), (r / (view.xmax - view.xmin)) * cssW, a0, a1, true);
+      ctx.strokeStyle = 'rgba(255,184,77,.38)';
+      ctx.lineWidth = 0.9;
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawSeparation() {
+    if (!sepZone) return;
+    const z = sepZone;
+    const compact = cssW < 560;
+    const pulse = 0.50 + 0.50 * Math.sin(fieldTime * 2.1);
+    ctx.save();
+
+    // Soft separated-flow envelope over the aft upper surface.
+    pathPoly(z.poly);
+    const sepFill = ctx.createLinearGradient(0, Y(z.label.y), 0, Y(z.label.y - 0.14));
+    sepFill.addColorStop(0, `rgba(255,145,82,${0.22 + 0.12 * z.strength})`);
+    sepFill.addColorStop(1, `rgba(255,92,63,${0.035 + 0.05 * z.strength})`);
+    ctx.fillStyle = sepFill;
+    ctx.fill();
+
+    // Technical hatching makes the envelope read as an annotated region,
+    // not just a blob of warm particles.
+    ctx.save();
+    pathPoly(z.poly);
+    ctx.clip();
+    ctx.strokeStyle = `rgba(255,195,132,${0.10 + 0.08 * z.strength})`;
+    ctx.lineWidth = 0.8;
+    const hatchGap = compact ? 9 : 12;
+    const topPx = Y(z.top[z.top.length - 1].y);
+    const botPx = Y(z.bottom[z.bottom.length - 1].y);
+    for (let px = X(z.top[0].x) - 60; px < X(z.top[z.top.length - 1].x) + 60; px += hatchGap) {
+      ctx.beginPath();
+      ctx.moveTo(px, botPx + 18);
+      ctx.lineTo(px + 42, topPx - 18);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Dashed boundary: the classic separation-zone technical annotation.
+    ctx.beginPath();
+    ctx.moveTo(X(z.top[0].x), Y(z.top[0].y));
+    for (let i = 1; i < z.top.length; i++) ctx.lineTo(X(z.top[i].x), Y(z.top[i].y));
+    for (let i = z.bottom.length - 1; i >= 0; i--) ctx.lineTo(X(z.bottom[i].x), Y(z.bottom[i].y));
+    ctx.closePath();
+    ctx.setLineDash([6, 5]);
+    ctx.lineDashOffset = -fieldTime * 16;
+    ctx.strokeStyle = `rgba(255,190,125,${0.52 + 0.24 * z.strength + 0.08 * pulse})`;
+    ctx.lineWidth = 1.45;
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // A light solid upper boundary anchors the dashed box visually.
+    ctx.beginPath();
+    ctx.moveTo(X(z.top[0].x), Y(z.top[0].y));
+    for (let i = 1; i < z.top.length; i++) ctx.lineTo(X(z.top[i].x), Y(z.top[i].y));
+    ctx.strokeStyle = `rgba(255,213,164,${0.18 + 0.16 * z.strength})`;
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+
+    // Small recirculating eddies inside the envelope; cheap, hand-drawn arcs.
+    const n = Math.max(2, Math.min(4, Math.round(2 + z.strength * 2)));
+    for (let i = 0; i < n; i++) {
+      const f = (i + 1) / (n + 1);
+      const x = lerp(z.top[2].x, z.top[z.top.length - 2].x, f);
+      const cy = upperSurfaceAt(Math.min(x, TE_X - 1e-4)).y + 0.012;
+      const r = (0.014 + 0.018 * z.strength) * (0.8 + 0.4 * i / n);
+      ctx.beginPath();
+      ctx.arc(X(x), Y(cy), (r / (view.xmax - view.xmin)) * cssW,
+        fieldTime * 2.2 + i * 1.7, fieldTime * 2.2 + i * 1.7 + Math.PI * 1.65);
+      ctx.strokeStyle = `rgba(255,198,138,${0.18 + 0.18 * z.strength})`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    const label = compact ? '气流分离区 · SEPARATION' : '气流分离区  SEPARATION ZONE';
+    const fs = compact ? 7 : 8;
+    ctx.font = `600 ${fs}px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace`;
+    const tw = ctx.measureText(label).width;
+    const lx = X(clamp(z.label.x, view.xmin + 0.06, view.xmax - 0.10));
+    const ly = Y(z.label.y);
+    const padX = 6, padY = 4;
+    const bx = lx - tw / 2 - padX;
+    const by = ly - fs / 2 - padY - 1;
+    ctx.fillStyle = 'rgba(9,20,27,.74)';
+    ctx.strokeStyle = `rgba(255,174,111,${0.32 + 0.2 * z.strength})`;
+    ctx.lineWidth = 0.8;
+    roundedRectPath(ctx, bx, by, tw + padX * 2, fs + padY * 2, 3);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = `rgba(255,208,160,${0.78 + 0.18 * z.strength})`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, lx, ly);
+
+    ctx.restore();
+  }
+
+  function drawLabels() {
+    if (!geom) return;
+    const compact = cssW < 560;
+    const fs = clamp(cssW * 0.0115, 6.5, 9.5);
+    const labelColor = 'rgba(150,226,255,.72)';
+    const warm = 'rgba(255,193,105,.85)';
+
+    if (!compact) {
+      drawLeader(LE_X + 0.47, -0.11, LE_X + 0.47, -0.010, labelColor, 0.28);
+      drawText('主翼 · MAIN WING', X(LE_X + 0.47), Y(-0.135), labelColor, fs, 'center', 500);
+    }
+
+    // Slat label: anchor it to the slat's own rounded leading edge at every
+    // angle, so it never points into empty space when stowed.
+    const slatAnchor = { x: geom.slat.leading.x, y: geom.slat.leading.y + 0.012 };
+    drawLeader(slatAnchor.x, slatAnchor.y, slatAnchor.x - 0.045, 0.14, 'rgba(53,224,194,.8)', 0.34);
+    drawText(
+      compact ? `SLAT ${Math.round(state.slat)}°` : `前缘缝翼 SLAT · ${Math.round(state.slat)}°`,
+      X(slatAnchor.x - 0.045), Y(0.155),
+      'rgba(89,231,212,.86)', fs, 'left', 500
+    );
+
+    // Flap label: below trailing edge.
+    const fh = geom.flap.hinge;
+    drawLeader(fh.x + 0.045, fh.y - 0.018, fh.x + 0.10, -0.176, 'rgba(110,168,255,.8)', 0.34);
+    drawText(
+      compact ? `FLAP ${Math.round(state.flap)}°` : `后缘襟翼 FLAP · ${Math.round(state.flap)}°`,
+      X(fh.x + 0.10), Y(-0.192),
+      'rgba(143,190,255,.9)', fs, 'left', 500
+    );
+
+    // Spoiler label: above the plate.
+    const sp = geom.spoiler;
+    drawLeader(sp.tip.x, sp.tip.y + 0.006, sp.tip.x + 0.038, Math.max(sp.tip.y + 0.075, 0.235), 'rgba(255,184,77,.8)', 0.38);
+    drawText(
+      compact ? `SPOILER ${Math.round(state.spoiler)}°` : `扰流板 SPOILER · ${Math.round(state.spoiler)}°`,
+      X(sp.tip.x + 0.038), Y(Math.max(sp.tip.y + 0.09, 0.25)),
+      warm, fs, 'left', 500
+    );
+
+    // Incoming flow caption.
+    ctx.save();
+    ctx.strokeStyle = 'rgba(116,215,255,.30)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(X(view.xmin + 0.08), Y(0.38));
+    ctx.lineTo(X(view.xmin + 0.30), Y(0.38));
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(X(view.xmin + 0.27), Y(0.394));
+    ctx.lineTo(X(view.xmin + 0.30), Y(0.38));
+    ctx.lineTo(X(view.xmin + 0.27), Y(0.366));
+    ctx.stroke();
+    drawText(`U∞ ${Math.round(state.airspeed)}%`, X(view.xmin + 0.075), Y(0.402), 'rgba(145,212,240,.55)', 7, 'left', 400);
+    ctx.restore();
+  }
+
+  function drawSparks() {
+    if (!sparks.length) return;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (const s of sparks) {
+      const a = clamp(s.life / s.maxLife, 0, 1);
+      const x = X(s.x);
+      const y = Y(s.y);
+      ctx.strokeStyle = `rgba(255,205,126,${a * 0.8})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x - s.vx * 8, y + s.vy * 8);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(x, y, s.size * a, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,239,196,${a})`;
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawArrow(x1, y1, x2, y2, color, width, label) {
+    const ax = X(x1), ay = Y(y1);
+    const bx = X(x2), by = Y(y2);
+    const ang = Math.atan2(by - ay, bx - ax);
+    const size = Math.max(5, width * 2.5);
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineCap = 'round';
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(bx - Math.cos(ang) * size * 0.55, by - Math.sin(ang) * size * 0.55);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(bx, by);
+    ctx.lineTo(bx - Math.cos(ang - 0.5) * size, by - Math.sin(ang - 0.5) * size);
+    ctx.lineTo(bx - Math.cos(ang + 0.5) * size, by - Math.sin(ang + 0.5) * size);
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    if (label) {
+      const fs = clamp(cssW * 0.012, 7, 10);
+      ctx.font = `500 ${fs}px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace`;
+      ctx.textAlign = bx > cssW * 0.68 ? 'right' : 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = color;
+      ctx.shadowColor = 'rgba(0,0,0,.9)';
+      ctx.shadowBlur = 5;
+      ctx.fillText(label, bx + (bx > cssW * 0.68 ? -7 : 7), by - 7);
+    }
+    ctx.restore();
+  }
+
+  function drawVectors() {
+    if (!aero || !geom) return;
+    const V = aero.V;
+    const originX = LE_X + 0.40;
+    const originY = -0.005;
+    const liftLen = clamp(16 + 100 * aero.cl * Math.pow(V, 1.15), 12, 158);
+    const dragLen = clamp(8 + 72 * aero.cd * Math.pow(V, 1.7), 7, 82);
+    const alphaRad = state.alpha * DEG;
+    const liftDir = { x: -Math.sin(alphaRad), y: Math.cos(alphaRad) };
+    const dragDir = { x: Math.cos(alphaRad), y: Math.sin(alphaRad) };
+
+    ctx.save();
+    // A faint force origin marker.
+    ctx.beginPath();
+    ctx.arc(X(originX), Y(originY), 2, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(217,248,255,.6)';
+    ctx.fill();
+
+    drawArrow(originX, originY,
+      originX + liftDir.x * liftLen / 520,
+      originY + liftDir.y * liftLen / 520,
+      'rgba(84,235,255,.92)', 1.8,
+      `L ${aero.lift.toFixed(2)}`);
+    drawArrow(originX, originY,
+      originX + dragDir.x * dragLen / 520,
+      originY + dragDir.y * dragLen / 520,
+      'rgba(255,184,77,.86)', 1.25,
+      `D ${aero.cd.toFixed(3)}`);
+
+    if (cssW >= 560) {
+      drawText('LIFT', X(originX) + 8, Y(originY + liftLen / 520) - 8,
+        'rgba(111,235,255,.55)', 6.5, 'left', 400);
+      drawText('DRAG', X(originX + dragLen / 520) + 6, Y(originY) + 10,
+        'rgba(255,190,98,.55)', 6.5, 'left', 400);
+    }
+    ctx.restore();
+  }
+
+  function drawAnnotations() {
+    if (!geom) return;
+    drawLabels();
+    drawVectors();
+    drawSparks();
+  }
+
+  /* =========================================================
+     UI, telemetry, automatic demonstration, main loop
+     ========================================================= */
+  function paintRange(input) {
+    const min = Number(input.min);
+    const max = Number(input.max);
+    const p = clamp((Number(input.value) - min) / Math.max(max - min, 1e-9), 0, 1) * 100;
+    input.style.setProperty('--p', p.toFixed(2) + '%');
+  }
+
+  function syncControls() {
+    el.airspeed.value = String(Math.round(state.airspeed));
+    el.alpha.value = String(state.alpha);
+    el.slat.value = String(Math.round(state.slat));
+    el.flap.value = String(Math.round(state.flap));
+    el.spoiler.value = String(Math.round(state.spoiler));
+    el.airspeedValue.textContent = String(Math.round(state.airspeed));
+    el.alphaValue.textContent = Number(state.alpha).toFixed(1);
+    el.slatValue.textContent = String(Math.round(state.slat));
+    el.flapValue.textContent = String(Math.round(state.flap));
+    el.spoilerValue.textContent = String(Math.round(state.spoiler));
+    paintRange(el.airspeed);
+    paintRange(el.alpha);
+    paintRange(el.slat);
+    paintRange(el.flap);
+    paintRange(el.spoiler);
+    el.airspeed.setAttribute('aria-valuetext', `${Math.round(state.airspeed)}%`);
+    el.alpha.setAttribute('aria-valuetext', `${Number(state.alpha).toFixed(1)} 度`);
+    el.slat.setAttribute('aria-valuetext', `${Math.round(state.slat)} 度`);
+    el.flap.setAttribute('aria-valuetext', `${Math.round(state.flap)} 度`);
+    el.spoiler.setAttribute('aria-valuetext', `${Math.round(state.spoiler)} 度`);
+  }
+
+  function currentPhase() {
+    if (state.auto) {
+      const idx = phaseIndex(state.autoT);
+      return [
+        { icon: '🛫', text: '起飞爬升中', sub: '空速 0→80% · 缝翼 10° · 襟翼 15°' },
+        { icon: '✈️', text: '巡航中', sub: '空速 100% · 缝翼 / 襟翼 / 扰流板收回' },
+        { icon: '🛬', text: '降落进近中', sub: '空速 60% · 缝翼 20° · 襟翼 30°' },
+        { icon: '⚠️', text: '触地减速中', sub: '空速 20% · 扰流板渐进至 90° · 巨大湍流' }
+      ][idx];
+    }
+    if (state.autoDone) {
+      return { icon: '✅', text: '演示完成', sub: '16.0s 剖面结束 · 可继续手动调节' };
+    }
+    if (!state.ready) {
+      return { icon: '⏳', text: '流场初始化', sub: '正在构建几何与粒子' };
+    }
+    return { icon: '🕹', text: '手动控制', sub: '五通道独立可调' };
+  }
+
+  function updateStatus() {
+    if (!aero) return;
+    let key = 'ok';
+    let title = '附着流';
+    let copy = '低阻构型，流线平顺；升力主要由翼型弯度与襟翼环量建立。';
+
+    if (aero.V < 0.012) {
+      key = 'warn';
+      title = '无来流';
+      copy = '空速为 0。增加空速或播放自动演示，建立稳定来流。';
+    } else if (state.spoiler >= 55) {
+      key = 'bad';
+      title = '升力破坏';
+      copy = '扰流板大角度升起，上表面气流被强制剥离；乱流向后输运并覆盖襟翼上方。';
+    } else if (state.spoiler > 2) {
+      key = 'warn';
+      title = '扰流板扰动';
+      copy = '扰流板破坏上表面附着流，升力下降、阻力上升；尾流正在向襟翼上方传播。';
+    } else if (state.alpha >= 12) {
+      key = 'bad';
+      title = '大迎角分离';
+      copy = '迎角超过 12°，上表面后段气流脱离并形成分离区；降低迎角可恢复附着。';
+    } else if (aero.separation > 0.62) {
+      key = 'bad';
+      title = '失速风险';
+      copy = '襟翼偏转较大，后缘分离区扩张；缝翼可补充上表面能量、改善附着。';
+    } else if (state.slat > 1 && state.flap > 14) {
+      key = 'ok';
+      title = '增升附着';
+      copy = '缝翼槽道将高能气流送入上表面，襟翼增加环量；当前处于高升力构型。';
+    } else if (aero.separation > 0.36) {
+      key = 'warn';
+      title = '分离风险';
+      copy = '后缘附近出现分离趋势；放下缝翼可重新贴附上表面气流。';
+    } else if (state.flap > 20) {
+      key = 'ok';
+      title = '高升力构型';
+      copy = '襟翼大角度下偏，环量与阻力同时增加；适合低速进近。';
+    } else if (state.flap > 2 || state.slat > 0) {
+      key = 'ok';
+      title = '附着流';
+      copy = '缝翼/襟翼已偏转，升力增加；上表面气流仍保持附着。';
+    } else if (state.flap < 1 && state.slat < 1) {
+      key = 'ok';
+      title = '低阻巡航';
+      copy = '缝翼、襟翼与扰流板均已收回；流线平顺，诱导阻力占主导。';
+    }
+
+    el.statusChip.className = 'status-chip' + (key === 'warn' ? ' warn' : key === 'bad' ? ' bad' : '');
+    el.statusChip.textContent = title;
+    el.statusCopy.textContent = copy;
+    el.sepFill.style.width = `${Math.round(aero.separation * 100)}%`;
+  }
+
+  function updateUI(force) {
+    if (!force && performance.now() - lastUI < 80) return;
+    lastUI = performance.now();
+    const phase = currentPhase();
+    el.phaseIcon.textContent = phase.icon;
+    el.phaseText.textContent = phase.text;
+    el.phaseSub.textContent = phase.sub;
+    el.phaseChip.textContent = `${phase.icon} ${phase.text}`;
+    el.timeCode.textContent = state.auto
+      ? `T+${state.autoT.toFixed(1)}s`
+      : state.autoDone ? 'T+16.0s' : 'T+00.0s';
+
+    const progress = state.auto
+      ? state.autoT / AUTO_DURATION
+      : state.autoDone ? 1 : 0;
+    el.timelineFill.style.width = `${clamp(progress, 0, 1) * 100}%`;
+    const activeIdx = state.auto ? phaseIndex(state.autoT) : state.autoDone ? 4 : -1;
+    el.timelineMarkers.forEach((marker, i) => {
+      marker.classList.toggle('active', i <= activeIdx);
+    });
+
+    el.autoBtn.classList.toggle('running', state.auto);
+    el.autoBtn.classList.toggle('complete', !state.auto && state.autoDone);
+    el.autoBtn.setAttribute('aria-pressed', state.auto ? 'true' : 'false');
+    if (state.auto) {
+      el.autoIcon.textContent = '■';
+      el.autoLabel.textContent = '停止自动演示';
+      el.autoBtn.querySelector('.auto-copy small').textContent = '自动接管中 · 拖动滑块已锁定';
+    } else if (state.autoDone) {
+      el.autoIcon.textContent = '▶';
+      el.autoLabel.textContent = '重新播放自动演示';
+      el.autoBtn.querySelector('.auto-copy small').textContent = '16s 剖面完成 · 再次播放';
+    } else {
+      el.autoIcon.textContent = '▶';
+      el.autoLabel.textContent = '播放自动演示';
+      el.autoBtn.querySelector('.auto-copy small').textContent = '16 秒 · 起飞 / 巡航 / 进近 / 触地';
+    }
+
+    el.panel.classList.toggle('locked', state.auto);
+    for (const input of [el.airspeed, el.alpha, el.slat, el.flap, el.spoiler]) {
+      input.disabled = state.auto;
+    }
+
+    if (aero) {
+      const cl = aero.cl;
+      const clRatio = clamp(cl / 2.6, 0, 1);
+      const clAlert = state.spoiler > 2 && aero.liftFactor < 0.68;
+      const clWarn = !clAlert && (cl < 0.82 || aero.stall > 0.32);
+      el.hudSpeed.textContent = `${Math.round(state.airspeed)}%`;
+      el.hudAlpha.textContent = `${Number(state.alpha).toFixed(1)}°`;
+      el.hudConfig.textContent = `S${Math.round(state.slat)}° F${Math.round(state.flap)}° B${Math.round(state.spoiler)}°`;
+      el.hudCl.textContent = cl.toFixed(2);
+      el.clBar.style.width = `${clRatio * 100}%`;
+      el.clHud.classList.toggle('warn', clWarn);
+      el.clHud.classList.toggle('alert', clAlert);
+      el.metricCl.textContent = cl.toFixed(2);
+      el.metricClBar.style.width = `${clRatio * 100}%`;
+      el.metricClCard.classList.toggle('warn', clWarn);
+      el.metricClCard.classList.toggle('alert', clAlert);
+      el.metricCd.textContent = (aero.V < 0.012 ? 0 : aero.cd).toFixed(3);
+      el.metricLd.textContent = (aero.V < 0.012 ? 0 : aero.ld).toFixed(1);
+      el.metricLift.innerHTML = `${aero.lift.toFixed(2)}<small>a.u.</small>`;
+      el.metricQ.textContent = aero.q.toFixed(2);
+      el.metricSep.innerHTML = `${Math.round(aero.separation * 100)}<small>%</small>`;
+      el.footSpeed.textContent = `${Math.round(state.airspeed)}%`;
+      el.footAlpha.textContent = `${Number(state.alpha).toFixed(1)}°`;
+      el.footAlphaMain.textContent = `${Number(state.alpha).toFixed(1)}°`;
+      updateStatus();
+
+      let note;
+      if (state.spoiler >= 55) {
+        note = '<b>扰流板碰撞</b> · 气流撞击板体后破碎，乱流沿上表面向襟翼传播。';
+      } else if (state.spoiler > 2) {
+        note = '<b>扰流板扰动</b> · 升力下降，尾流开始污染襟翼上方气流。';
+      } else if (state.slat > 1) {
+        note = '<b>缝翼槽道</b> · 缝隙射流为上表面补充能量，帮助气流保持附着。';
+      } else if (state.flap > 3) {
+        note = '<b>襟翼环量</b> · 后缘下偏增加升力，同时带来更大的诱导阻力。';
+      } else {
+        note = '<b>低阻流场</b> · 四个部件完全独立；改变任一通道都会重新耦合整个粒子场。';
+      }
+      el.stageNote.innerHTML = note;
+    }
+
+    // Machine-readable diagnostics; harmless in normal use and useful
+    // for automated layout/interaction checks.
+    const root = document.documentElement;
+    root.dataset.phase = state.auto ? `auto-${phaseIndex(state.autoT)}` : state.autoDone ? 'complete' : 'manual';
+    root.dataset.auto = state.auto ? '1' : '0';
+    root.dataset.autoT = state.autoT.toFixed(2);
+    root.dataset.airspeed = state.airspeed.toFixed(1);
+    root.dataset.alpha = Number(state.alpha).toFixed(1);
+    root.dataset.slat = state.slat.toFixed(1);
+    root.dataset.flap = state.flap.toFixed(1);
+    root.dataset.spoiler = state.spoiler.toFixed(1);
+    root.dataset.cl = aero ? aero.cl.toFixed(4) : '0';
+    root.dataset.cd = aero ? aero.cd.toFixed(4) : '0';
+    root.dataset.sep = aero ? aero.separation.toFixed(4) : '0';
+    root.dataset.collisions = String(collisionTotal);
+    let sum = 0;
+    for (const p of particles) sum += p.speed || 0;
+    root.dataset.meanParticleSpeed = particles.length ? (sum / particles.length).toFixed(3) : '0';
+  }
+
+  function applyAutoTimeline(t) {
+    t = clamp(t, 0, AUTO_DURATION);
+    state.autoT = t;
+    if (t < 4) {
+      const p = easeInOutCubic(t / 4);
+      state.airspeed = 80 * p;
+      state.alpha = 10 * p;
+      state.slat = 10 * p;
+      state.flap = 15 * p;
+      state.spoiler = 0;
+    } else if (t < 8) {
+      const p = easeInOutCubic((t - 4) / 4);
+      state.airspeed = 80 + 20 * easeOutCubic(clamp((t - 4) / 0.80, 0, 1));
+      state.alpha = 10 - 8 * p;
+      state.slat = 10 * (1 - p);
+      state.flap = 15 * (1 - p);
+      state.spoiler = 0;
+    } else if (t < 12) {
+      const p = easeInOutCubic((t - 8) / 4);
+      state.airspeed = 100 - 40 * p;
+      state.alpha = 2 + 6 * p;
+      state.slat = 20 * p;
+      state.flap = 30 * p;
+      state.spoiler = 0;
+    } else {
+      const ps = easeOutCubic(clamp((t - 12) / 1.2, 0, 1));
+      // Deploy the spoiler over a clearly visible 2.2s ramp, after a short
+      // mechanical delay. The previous 0.22s ease-out made the plate snap
+      // up almost instantly, which read as a bug rather than a mechanism.
+      // Ease-in-out keeps the angular velocity continuous at both ends.
+      const pb = easeInOutCubic(clamp((t - 12 - 0.12) / 2.2, 0, 1));
+      state.airspeed = 60 - 40 * ps;
+      state.alpha = 8;
+      state.slat = 20;
+      state.flap = 30;
+      state.spoiler = 90 * pb;
+    }
+    state.airspeed = clamp(state.airspeed, 0, 100);
+    state.alpha = clamp(state.alpha, -4, 16);
+    state.slat = clamp(state.slat, 0, 20);
+    state.flap = clamp(state.flap, 0, 30);
+    state.spoiler = clamp(state.spoiler, 0, 90);
+    syncControls();
+    dirty = true;
+  }
+
+  function startAuto() {
+    if (state.auto) {
+      stopAuto();
+      return;
+    }
+    state.auto = true;
+    state.autoDone = false;
+    state.autoT = 0;
+    state.airspeed = 0;
+    state.alpha = 0;
+    state.slat = 0;
+    state.flap = 0;
+    state.spoiler = 0;
+    particles.length = 0;
+    collisionTotal = 0;
+    sparks.length = 0;
+    syncControls();
+    dirty = true;
+    bgDirty = true;
+    lastRebuild = -1e9;
+    updateUI(true);
+  }
+
+  function stopAuto() {
+    state.auto = false;
+    state.autoDone = false;
+    state.autoT = 0;
+    dirty = true;
+    updateUI(true);
+  }
+
+  function finishAuto() {
+    state.auto = false;
+    state.autoDone = true;
+    state.autoT = AUTO_DURATION;
+    dirty = true;
+    updateUI(true);
+  }
+
+  function rebuild() {
+    try {
+      geom = buildGeometry();
+      aero = computeAero();
+      sepZone = buildSepZone();
+      if (!particles.length) {
+        seedParticles();
+      } else {
+        for (const p of particles) {
+          if (!validSpawn(p.x, p.y)) respawnParticle(p, false);
+        }
+      }
+      streamlines = buildStreamlines();
+      dirty = false;
+      bgDirty = true;
+      state.ready = true;
+      if (el.loading) {
+        el.loading.classList.add('hidden');
+        el.loading.style.display = 'none';
+      }
+      updateUI(true);
+    } catch (err) {
+      showError(err);
+    }
+  }
+
+  function draw() {
+    if (!view) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
+    if (bgDirty) {
+      renderBackground();
+      bgDirty = false;
+    }
+    ctx.drawImage(bgCanvas, 0, 0, cssW, cssH);
+    if (!geom) return;
+    drawWakeFx();
+    drawParticles();
+    drawMainWing();
+    // The slat is always visible. At 0° it overlaps the closed NACA nose:
+    // its rounded tail sits in the hidden socket while its body forms a
+    // continuous leading-edge fairing. Once the slat starts to move, the
+    // exposed U-cavity and its two lips are drawn as well.
+    drawSlat();
+    drawFlap();
+    drawSpoiler();
+    drawSeparation();
+    drawAnnotations();
+  }
+
+  function tick(now) {
+    try {
+      const dt = lastTime ? Math.min((now - lastTime) / 1000, 0.05) : 0;
+      lastTime = now;
+      fieldTime = now / 1000;
+
+      if (state.auto) {
+        const next = Math.min(AUTO_DURATION, state.autoT + Math.max(dt, 0));
+        applyAutoTimeline(next);
+        if (next >= AUTO_DURATION - 1e-9) {
+          finishAuto();
+        }
+      }
+
+      if (dirty && now - lastRebuild > 45) {
+        rebuild();
+        lastRebuild = now;
+      }
+
+      updateParticles(dt);
+      updateUI(false);
+      draw();
+    } catch (err) {
+      showError(err);
+    } finally {
+      requestAnimationFrame(tick);
+    }
+  }
+
+  function showError(err) {
+    console.error(err);
+    if (errorShown) return;
+    errorShown = true;
+    el.loading.classList.remove('hidden');
+    el.loading.style.display = 'flex';
+    el.loading.innerHTML = '<strong>流场初始化失败</strong><span>请刷新页面后重试</span>';
+    state.error = String(err && err.message ? err.message : err);
+    document.documentElement.dataset.error = state.error;
+  }
+
+  function bindControls() {
+    const bindings = [
+      ['airspeed', el.airspeed],
+      ['alpha', el.alpha],
+      ['slat', el.slat],
+      ['flap', el.flap],
+      ['spoiler', el.spoiler]
+    ];
+    for (const [key, input] of bindings) {
+      input.addEventListener('input', () => {
+        if (state.auto) return;
+        state[key] = Number(input.value);
+        state.autoDone = false;
+        state.autoT = 0;
+        dirty = true;
+        paintRange(input);
+        syncControls();
+        updateUI(true);
+      });
+      input.addEventListener('change', () => {
+        if (!state.auto) {
+          state.autoDone = false;
+          updateUI(true);
+        }
+      });
+    }
+
+    el.autoBtn.addEventListener('click', () => {
+      if (state.auto) stopAuto();
+      else startAuto();
+    });
+
+    if ('ResizeObserver' in window) {
+      const ro = new ResizeObserver(() => scheduleResize());
+      ro.observe(el.stage);
+    } else {
+      window.addEventListener('resize', scheduleResize);
+    }
+    window.addEventListener('resize', scheduleResize);
+    window.addEventListener('orientationchange', scheduleResize);
+  }
+
+  function init() {
+    bindControls();
+    resizeCanvas();
+    rebuild();
+    if (!state.ready) return;
+    updateUI(true);
+    lastTime = performance.now();
+    requestAnimationFrame(tick);
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
